@@ -1,0 +1,9 @@
+Revision history for Perl extension File::Path.
+
+1.99_01 2007-05-17 13:09:59 UTC
+
+    - Dual-lifed from the Perl core distribution.
+    - New-style interface added.
+    - Extensive tests added to improve code coverage.
+    - 5.005 compatibility restored
+
