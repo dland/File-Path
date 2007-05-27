@@ -1,4 +1,4 @@
-This file is the README for File::Path version 1.99_01
+This file is the README for File::Path version 1.99_02
 
 INSTALLATION
 
@@ -41,10 +41,10 @@ L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Path>
 
 AUTHORS
 
-Tim Bunce <F<Tim.Bunce@ig.co.uk>> and
-Charles Bailey <F<bailey@newman.upenn.edu>>.
+Tim Bunce <Tim.Bunce@ig.co.uk> and
+Charles Bailey <bailey@newman.upenn.edu>.
 
-Currently maintained by David Landgren <F<david@landgren.net>>.
+Currently maintained by David Landgren <david@landgren.net>.
 
 COPYRIGHT
 

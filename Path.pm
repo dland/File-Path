@@ -4,6 +4,11 @@ package File::Path;
 
 File::Path - create or remove directory trees
 
+=head1 VERSION
+
+This document describes version 1.99_02 of File::Path, released
+2007-05-27.
+
 =head1 SYNOPSIS
 
     use File::Path;
@@ -352,9 +357,10 @@ it under the same terms as Perl itself.
 =cut
 
 use 5.005_04;
-use File::Basename ();
-use Exporter ();
 use strict;
+
+use File::Basename ();
+use File::Spec     ();
 BEGIN {
     if ($] >= 5.006) {
         eval "use warnings";
@@ -366,8 +372,9 @@ BEGIN {
     }
 }
 
+use Exporter ();
 use vars qw($VERSION @ISA @EXPORT);
-$VERSION = '1.99_01';
+$VERSION = '1.99_02';
 @ISA     = qw(Exporter);
 @EXPORT  = qw(mkpath rmtree);
 
@@ -428,6 +435,7 @@ sub _mkpath {
     local($")=$Is_MacOS ? ":" : "/";
     my(@created,$path);
     foreach $path (@$paths) {
+        next unless length($path);
         $path .= '/' if $^O eq 'os2' and $path =~ /^\w:\z/s; # feature of CRT 
         # Logic wants Unix paths, so go with the flow.
         if ($Is_VMS) {
@@ -444,11 +452,12 @@ sub _mkpath {
             push(@created, $path);
         }
         else {
-            my ($e, $e1) = ($!, $^E);
+            my $save_bang = $!;
+            my ($e, $e1) = ($save_bang, $^E);
             $e .= "; $e1" if $e ne $e1;
             # allow for another process to have created it meanwhile
             if (!-d $path) {
-                $! = $e;
+                $! = $save_bang;
                 if ($arg->{error}) {
                     push @{${$arg->{error}}}, {$path => $e};
                 }
@@ -569,8 +578,12 @@ sub _rmtree {
                 @files = map("$root$_", @files);
             }
             else {
-                # should we use File::Spec's updir() and curdir() here?
-                @files = map("$root/$_", grep {$_ ne '.' and $_ ne '..'} @files);
+                my $updir  = File::Spec->updir();
+                my $curdir = File::Spec->curdir();
+                @files = map(File::Spec->catdir($root,$_),
+                    grep {$_ ne $updir and $_ ne $curdir}
+                    @files
+                );
             }
             $arg->{depth}++;
             $count += _rmtree($arg, \@files);

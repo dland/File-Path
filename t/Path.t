@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 71;
+use Test::More tests => 72;
 
 BEGIN {
     use_ok('File::Path');
@@ -11,6 +11,15 @@ BEGIN {
 
 eval "use Test::Output";
 my $has_Test_Output = $@ ? 0 : 1;
+
+my $dir_sep = do {
+    my $path = catfile(qw(xxx yyy));
+    $path =~ s/(?:xxx|yyy)//g;
+    $path;
+};
+diag(
+    qq(path separator on this platform is "$dir_sep", updir is ") . updir() . q("),
+);
 
 # first check for stupid permissions second for full, so we clean up
 # behind ourselves
@@ -52,11 +61,24 @@ is(scalar(@created), 7, "created list of directories");
 is(scalar(@created), 0, "skipped making existing directory")
     or diag("unexpectedly recreated @created");
 
-my $dir = catdir($tmp_base, 'B');
-my $dir2 = catdir($dir, updir());
-@created = mkpath($dir2, {mask => 0700});
-is(scalar(@created), 1, "make directory with trailing parent segment");
-is($created[0], $dir, "made parent");
+@created = mkpath('');
+is(scalar(@created), 0, "Can't create a directory named ''");
+
+my $dir;
+my $dir2;
+
+SKIP: {
+    $dir = catdir($tmp_base, 'B');
+    $dir2 = catdir($dir, updir());
+    # IOW: File::Spec->catdir( qw(foo bar), File::Spec->updir ) eq 'foo'
+    # rather than foo/bar/..    
+    skip "updir() canonicalises path on this platform", 2
+        if $dir2 eq $tmp_base;
+        
+    @created = mkpath($dir2, {mask => 0700});
+    is(scalar(@created), 1, "make directory with trailing parent segment");
+    is($created[0], $dir, "made parent");
+};
 
 my $count = rmtree({error => \$error});
 is( $count, 0, 'rmtree of nothing, count of zero' );
@@ -177,9 +199,12 @@ SKIP: {
         or diag(@created);
 }
 
+my $extra =  catdir(curdir(), qw(EXTRA 1 a));
+
 SKIP: {
     skip "extra scenarios not set up, see eg/setup-extra-tests", 8
-        unless -d 'EXTRA';
+        unless -e $extra;
+
     my ($list, $err);
     $dir = catdir( 'EXTRA', '1' );
     rmtree( $dir, {result => \$list, error => \$err} );
@@ -208,10 +233,10 @@ SKIP: {
         unless $has_Test_Output;
 
     SKIP: {
-        skip "extra scenarios not set up, see eg/setup-extra-tests", 2
-            unless -d 'EXTRA';
-
         $dir = catdir('EXTRA', '3');
+        skip "extra scenarios not set up, see eg/setup-extra-tests", 2
+            unless -e $dir;
+
         stderr_like( 
             sub {rmtree($dir, {})},
             qr{\ACan't remove directory \S+: .*? at \S+ line \d+\n},
@@ -288,7 +313,7 @@ and can't restore permissions to \d+
 
 SKIP: {
     skip "extra scenarios not set up, see eg/setup-extra-tests", 6
-        unless -d 'EXTRA';
+        unless -d catdir(qw(EXTRA 1));
 
     rmtree 'EXTRA', {safe => 0, error => \$error};
     is( scalar(@$error), 7, 'seven deadly sins' );

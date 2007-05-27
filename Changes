@@ -1,5 +1,11 @@
 Revision history for Perl extension File::Path.
 
+1.99_02 2007-05-27 09:25:53 UTC
+
+    - Don't allow a directory named '' (empty string) to be created.
+    - File::Spec routines catdir() and updir() interact differently on Win32
+    - $! needs to be managed more carefully on Win32
+
 1.99_01 2007-05-17 13:09:59 UTC
 
     - Dual-lifed from the Perl core distribution.
