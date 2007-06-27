@@ -1,0 +1,6 @@
+Things TODO for File::Path
+
+1. Write a batch file to be run as Administrator on Win32
+   that sets up files that cannot be removed with the
+   current user (and will hit code paths that are never
+   visited under Unix). Useful for code coverage improvements.

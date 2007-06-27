@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 72;
+use Test::More tests => 84;
 
 BEGIN {
     use_ok('File::Path');
@@ -11,15 +11,6 @@ BEGIN {
 
 eval "use Test::Output";
 my $has_Test_Output = $@ ? 0 : 1;
-
-my $dir_sep = do {
-    my $path = catfile(qw(xxx yyy));
-    $path =~ s/(?:xxx|yyy)//g;
-    $path;
-};
-diag(
-    qq(path separator on this platform is "$dir_sep", updir is ") . updir() . q("),
-);
 
 # first check for stupid permissions second for full, so we clean up
 # behind ourselves
@@ -73,7 +64,8 @@ SKIP: {
     # IOW: File::Spec->catdir( qw(foo bar), File::Spec->updir ) eq 'foo'
     # rather than foo/bar/..    
     skip "updir() canonicalises path on this platform", 2
-        if $dir2 eq $tmp_base;
+        if $dir2 eq $tmp_base
+            or $^O eq 'cygwin';
         
     @created = mkpath($dir2, {mask => 0700});
     is(scalar(@created), 1, "make directory with trailing parent segment");
@@ -82,11 +74,7 @@ SKIP: {
 
 my $count = rmtree({error => \$error});
 is( $count, 0, 'rmtree of nothing, count of zero' );
-is( scalar(@$error), 1, 'one diagnostic captureed' );
-eval { ($file, $message) = each %{$error->[0]} }; # too early to die, just in case
-is( $@, '', 'decoded diagnostic' );
-is( $file, '', 'general diagnostic' );
-is( $message, 'No root path(s) specified', 'expected diagnostic received' );
+is( scalar(@$error), 0, 'no diagnostic captured' );
 
 @created = mkpath($tmp_base, 0);
 is(scalar(@created), 0, "skipped making existing directories (old style 1)")
@@ -142,6 +130,23 @@ is(scalar(@$list),  4, "list contains 4 elements")
 
 ok(-d $dir,  "dir a still exists");
 ok(-d $dir2, "dir z still exists");
+
+$dir = catdir($tmp_base,'F');
+
+@created = mkpath($dir, undef, 0770);
+is(scalar(@created), 1, "created directory (old style 2 verbose undef)");
+is($created[0], $dir, "created directory (old style 2 verbose undef) cross-check");
+is(rmtree($dir, undef, 0), 1, "removed directory 2 verbose undef");
+
+@created = mkpath($dir, undef);
+is(scalar(@created), 1, "created directory (old style 2a verbose undef)");
+is($created[0], $dir, "created directory (old style 2a verbose undef) cross-check");
+is(rmtree($dir, undef), 1, "removed directory 2a verbose undef");
+
+@created = mkpath($dir, 0, undef);
+is(scalar(@created), 1, "created directory (old style 3 mode undef)");
+is($created[0], $dir, "created directory (old style 3 mode undef) cross-check");
+is(rmtree($dir, 0, undef), 1, "removed directory 3 verbose undef");
 
 # borderline new-style heuristics
 if (chdir $tmp_base) {
@@ -220,6 +225,9 @@ SKIP: {
     rmtree($dir, {error => \$error});
     is( scalar(@$error), 2, 'two errors for an unreadable dir' );
 
+    $dir = catdir('EXTRA', '3', 'T');
+    rmtree($dir, {error => \$error});
+
     $dir = catdir( 'EXTRA', '4' );
     rmtree($dir,  {result => \$list, error => \$err} );
     is( @$list, 0, q{don't follow a symlinked dir} );
@@ -228,8 +236,18 @@ SKIP: {
     is( $file, $dir, 'symlink reported in error' );
 }
 
+{
+    $dir = catdir($tmp_base, 'Z');
+    @created = mkpath($dir);
+    is(scalar(@created), 1, "create a Z directory");
+
+    local @ARGV = ($dir);
+    rmtree( [grep -e $_, @ARGV], 0, 0 );
+    ok(!-e $dir, "blow it away via \@ARGV");
+}
+
 SKIP: {
-    skip 'Test::Output not available', 10
+    skip 'Test::Output not available', 14
         unless $has_Test_Output;
 
     SKIP: {
@@ -237,6 +255,14 @@ SKIP: {
         skip "extra scenarios not set up, see eg/setup-extra-tests", 2
             unless -e $dir;
 
+        $dir = catdir('EXTRA', '3', 'U');
+        stderr_like( 
+            sub {rmtree($dir, {verbose => 0})},
+            qr{\bCan't read \Q$dir\E: },
+            q(rmtree can't read root dir)
+        );
+
+        $dir = catdir('EXTRA', '3');
         stderr_like( 
             sub {rmtree($dir, {})},
             qr{\ACan't remove directory \S+: .*? at \S+ line \d+\n},
@@ -260,10 +286,19 @@ and can't restore permissions to \d+
     $dir2 = catdir($base,'B');
 
     stderr_like(
-        \&rmtree,
+        sub { rmtree( undef, 1 ) },
         qr/\ANo root path\(s\) specified\b/,
         "rmtree of nothing carps sensibly"
     );
+
+    stderr_like(
+        sub { rmtree( '', 1 ) },
+        qr/\ANo root path\(s\) specified\b/,
+        "rmtree of empty dir carps sensibly"
+    );
+
+    stderr_is( sub { mkpath() }, '', "mkpath no args does not carp" );
+    stderr_is( sub { rmtree() }, '', "rmtree no args does not carp" );
 
     stdout_is(
         sub {@created = mkpath($dir, 1)},

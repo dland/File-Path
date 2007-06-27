@@ -2,12 +2,12 @@ package File::Path;
 
 =head1 NAME
 
-File::Path - create or remove directory trees
+File::Path - Create or remove directory trees
 
 =head1 VERSION
 
-This document describes version 1.99_02 of File::Path, released
-2007-05-27.
+This document describes version 2.00_05 of File::Path, released
+2007-06-27.
 
 =head1 SYNOPSIS
 
@@ -18,7 +18,7 @@ This document describes version 1.99_02 of File::Path, released
 
     rmtree(
         'foo/bar/baz', '/zug/zwang',
-        { verbose => 1, errors  => \my $err_list }
+        { verbose => 1, error  => \my $err_list }
     );
 
     # traditional
@@ -292,7 +292,7 @@ moved while C<rmtree> is running, and in particular on any directory
 trees with any path components or subdirectories potentially writable
 by untrusted users.
 
-Additionally, if the C<skip_others> parareter is not set (or the
+Additionally, if the C<skip_others> parameter is not set (or the
 third parameter in the traditional inferface is not TRUE) and
 C<rmtree> is interrupted, it may leave files and directories with
 permissions altered to allow deletion.
@@ -362,10 +362,7 @@ use strict;
 use File::Basename ();
 use File::Spec     ();
 BEGIN {
-    if ($] >= 5.006) {
-        eval "use warnings";
-    }
-    else {
+    if ($] < 5.006) {
         # can't say 'opendir my $dh, $dirname'
         # need to initialise $dh
         eval "use Symbol";
@@ -374,7 +371,7 @@ BEGIN {
 
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT);
-$VERSION = '1.99_02';
+$VERSION = '2.00_05';
 @ISA     = qw(Exporter);
 @EXPORT  = qw(mkpath rmtree);
 
@@ -397,17 +394,27 @@ sub _croak {
 }
 
 sub mkpath {
-    my $new_style = (
-        ref($_[0]) eq 'ARRAY'
-        or (@_ == 2 and $_[1] =~ /\A\d+\z/)
-        or (@_ == 3 and $_[1] =~ /\A\d+\z/ and $_[2] =~ /\A\d+\z/)
-    ) ? 0 : 1;
+    my $old_style = (
+        UNIVERSAL::isa($_[0],'ARRAY')
+        or (@_ == 2 and (defined $_[1] ? $_[1] =~ /\A\d+\z/ : 1))
+        or (@_ == 3
+            and (defined $_[1] ? $_[1] =~ /\A\d+\z/ : 1)
+            and (defined $_[2] ? $_[2] =~ /\A\d+\z/ : 1)
+        )
+    ) ? 1 : 0;
 
     my $arg;
     my $paths;
 
-    if ($new_style) {
-        if (ref $_[-1] eq 'HASH') {
+    if ($old_style) {
+        my ($verbose, $mode);
+        ($paths, $verbose, $mode) = @_;
+        $paths = [$paths] unless UNIVERSAL::isa($paths,'ARRAY');
+        $arg->{verbose} = defined $verbose ? $verbose : 0;
+        $arg->{mode}    = defined $mode    ? $mode    : 0777;
+    }
+    else {
+        if (@_ > 0 and UNIVERSAL::isa($_[-1], 'HASH')) {
             $arg = pop @_;
             exists $arg->{mask} and $arg->{mode} = delete $arg->{mask};
             $arg->{mode} = 0777 unless exists $arg->{mode};
@@ -417,13 +424,6 @@ sub mkpath {
             @{$arg}{qw(verbose mode)} = (0, 0777);
         }
         $paths = [@_];
-    }
-    else {
-        my ($verbose, $mode);
-        ($paths, $verbose, $mode) = @_;
-        $paths = [$paths] unless ref($paths) eq 'ARRAY';
-        $arg->{verbose} = defined $verbose ? $verbose : 0;
-        $arg->{mode}    = defined $mode    ? $mode    : 0777;
     }
     return _mkpath($arg, $paths);
 }
@@ -471,17 +471,34 @@ sub _mkpath {
 }
 
 sub rmtree {
-    my $new_style = (
-        ref($_[0]) eq 'ARRAY'
-        or (@_ == 2 and $_[1] =~ /\A\d+\z/)
-        or (@_ == 3 and $_[1] =~ /\A\d+\z/ and $_[2] =~ /\A\d+\z/)
-    ) ? 0 : 1;
+    my $old_style = (
+        UNIVERSAL::isa($_[0],'ARRAY')
+        or (@_ == 2 and (defined $_[1] ? $_[1] =~ /\A\d+\z/ : 1))
+        or (@_ == 3
+            and (defined $_[1] ? $_[1] =~ /\A\d+\z/ : 1)
+            and (defined $_[2] ? $_[2] =~ /\A\d+\z/ : 1)
+        )
+    ) ? 1 : 0;
 
     my $arg;
     my $paths;
 
-    if ($new_style) {
-        if (ref $_[-1] eq 'HASH') {
+    if ($old_style) {
+        my ($verbose, $safe);
+        ($paths, $verbose, $safe) = @_;
+        $arg->{verbose} = defined $verbose ? $verbose : 0;
+        $arg->{safe}    = defined $safe    ? $safe    : 0;
+
+        if (defined($paths) and length($paths)) {
+            $paths = [$paths] unless UNIVERSAL::isa($paths,'ARRAY');
+        }
+        else {
+            _carp ("No root path(s) specified\n");
+            return 0;
+        }
+    }
+    else {
+        if (@_ > 0 and UNIVERSAL::isa($_[-1],'HASH')) {
             $arg = pop @_;
             ${$arg->{error}}  = [] if exists $arg->{error};
             ${$arg->{result}} = [] if exists $arg->{result};
@@ -492,23 +509,6 @@ sub rmtree {
         $arg->{depth} = 0;
         $paths = [@_];
     }
-    else {
-        my ($verbose, $safe);
-        ($paths, $verbose, $safe) = @_;
-        $paths = [$paths] unless ref($paths) eq 'ARRAY';
-        $arg->{verbose} = defined $verbose ? $verbose : 0;
-        $arg->{safe}    = defined $safe    ? $safe    : 0;
-    }
-
-    if (@$paths < 1) {
-        if ($arg->{error}) {
-            push @{${$arg->{error}}}, {'' => "No root path(s) specified"};
-        }
-        else {
-            _carp ("No root path(s) specified\n");
-        }
-      return 0;
-    }
     return _rmtree($arg, $paths);
 }
 
@@ -517,7 +517,7 @@ sub _rmtree {
     my $paths = shift;
     my($count) = 0;
     my (@files, $root);
-    foreach $root (@{$paths}) {
+    foreach $root (@$paths) {
         if ($Is_MacOS) {
             $root = ":$root" if $root !~ /:/;
             $root =~ s/([^:])\z/$1:/;
@@ -550,7 +550,7 @@ sub _rmtree {
             $d = gensym() if $] < 5.006;
             if (!opendir $d, $root) {
                 if ($arg->{error}) {
-                      push @{${$arg->{error}}}, {$root => "opendir: $!"};
+                    push @{${$arg->{error}}}, {$root => "opendir: $!"};
                 }
                 else {
                     _carp ("Can't read $root: $!");
@@ -580,7 +580,7 @@ sub _rmtree {
             else {
                 my $updir  = File::Spec->updir();
                 my $curdir = File::Spec->curdir();
-                @files = map(File::Spec->catdir($root,$_),
+                @files = map(File::Spec->catfile($root,$_),
                     grep {$_ ne $updir and $_ ne $curdir}
                     @files
                 );

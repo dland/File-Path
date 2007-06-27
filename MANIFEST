@@ -5,6 +5,7 @@ META.yml
 Makefile.PL
 Path.pm
 README
+TODO
 eg/setup-extra-tests
 t/Path.t
 t/taint.t

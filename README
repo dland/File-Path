@@ -1,4 +1,4 @@
-This file is the README for File::Path version 1.99_02
+This file is the README for File::Path version 2.00
 
 INSTALLATION
 
@@ -31,7 +31,12 @@ directories owned both by root and a specified user
   make test
 
 This is used to exercise parts of the code that ordinarily
-wouldn't be visited.
+wouldn't be visited. That is, as root, some files and
+directories will be created that the user 'david', which
+will run the test suite, will not be able to remove.
+
+It would be nice to do something tricksy like this for
+Win32, which has a much richer privilege scheme.
 
 BUGS
 

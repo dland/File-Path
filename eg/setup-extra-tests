@@ -1,4 +1,5 @@
 use strict;
+use File::Path; # heh
 use Getopt::Std;
 
 die "Not running as root (uid=$<)\n" if $<;
@@ -13,6 +14,7 @@ my ($uid, $gid) = $opt{u} =~ /\D/
     : (getpwuid($opt{u}))[2,3]
 ;
 
+rmtree('EXTRA') if -d 'EXTRA';
 create_dir('EXTRA', 0755);
 
 # directory EXTRA/1 could be deleted by a
@@ -40,6 +42,8 @@ create_dir(  'EXTRA/3/M',    0700, $uid, $gid );
 create_file( 'EXTRA/3/M/xx', 0400, $uid, $gid );
 create_file( 'EXTRA/3/M/yy', 0400, $uid, $gid );
 create_dir(  'EXTRA/3/S',    0000, $<,   $( );
+create_dir(  'EXTRA/3/T',    0000, $<,   $( );
+create_dir(  'EXTRA/3/U',    0000, $<,   $( );
 symlink './M', 'EXTRA/3/N' or die "symlink: $!";
 
 sub create_dir {
