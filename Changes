@@ -1,7 +1,10 @@
 Revision history for Perl extension File::Path.
 
-2.00
+2.00_06 2007-07-04 21:34:14 UTC
+    - Incorporate code changes from blead
+    - Skip counts off by one
 
+2.00_05 2007-06-27 21:23:25 UTC
     - Use catfile() instead of catdir() in _mkpath() for VMS,
       patch from Craig Berry.
     - Don't use warnings (my code doesn't have errors anyway),
@@ -11,13 +14,11 @@ Revision history for Perl extension File::Path.
       sufficiently modern.
 
 1.99_02 2007-05-27 09:25:53 UTC
-
     - Don't allow a directory named '' (empty string) to be created.
     - File::Spec routines catdir() and updir() interact differently on Win32
     - $! needs to be managed more carefully on Win32
 
 1.99_01 2007-05-17 13:09:59 UTC
-
     - Dual-lifed from the Perl core distribution.
     - New-style interface added.
     - Extensive tests added to improve code coverage.
