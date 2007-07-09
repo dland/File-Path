@@ -1,5 +1,8 @@
 Revision history for Perl extension File::Path.
 
+2.00_07 2007-07-09 19:33:52 UTC
+    - 2.00_06 upload unfortunately contained blib directories
+
 2.00_06 2007-07-04 21:34:14 UTC
     - Incorporate code changes from blead
     - Skip counts off by one
