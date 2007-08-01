@@ -19,6 +19,11 @@ WriteMakefile(
     AUTHOR        => 'David Landgren',
     PREREQ_PM => {
         'File::Basename' => 0,
+        'File::Spec'     => 0,
+        'Cwd'            => 0,
+    },
+    clean => {
+        FILES => 'cover_db',
     },
     @license,
 );

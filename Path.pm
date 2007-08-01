@@ -6,8 +6,8 @@ File::Path - Create or remove directory trees
 
 =head1 VERSION
 
-This document describes version 2.00_07 of File::Path, released
-2007-07-09.
+This document describes version 2.00_08 of File::Path, released
+2007-08-01.
 
 =head1 SYNOPSIS
 
@@ -251,6 +251,13 @@ the value will be set:
 
 =head2 NOTES
 
+C<File::Path> blindly exports C<mkpath> and C<rmtree> into the
+current namespace. These days, this is considered bad style, but
+to change it now would break too much code. Nonetheless, you are
+invited to specify what it is you are expecting to use:
+
+  use File::Path 'rmtree';
+
 =head3 HEURISTICS
 
 The functions detect (as far as possible) which way they are being
@@ -259,7 +266,7 @@ the heuristic for detecting the old style is either the presence
 of an array reference, or two or three parameters total and second
 and third parameters are numeric. Hence...
 
-    mkpath '486', '487', '488';
+    mkpath 486, 487, 488;
 
 ... will not assume the modern style and create three directories, rather
 it will create one directory verbosely, setting the permission to
@@ -270,12 +277,12 @@ If you want to ensure there is absolutely no ambiguity about which
 way the function will behave, make sure the first parameter is a
 reference to a one-element list, to force the old style interpretation:
 
-    mkpath ['486'], '487', '488';
+    mkpath [486], 487, 488;
 
 and get only one directory created. Or add a reference to an empty
 parameter hash, to force the new style:
 
-    mkpath '486', '487', '488', {};
+    mkpath 486, 487, 488, {};
 
 ... and hence create the three directories. If the empty hash
 reference seems a little strange to your eyes, or you suspect a
@@ -286,23 +293,21 @@ can add a parameter set to a default value:
 
 =head3 RACE CONDITIONS
 
-There are race conditions internal to the implementation of C<rmtree>
-making it unsafe to use on directory trees which may be altered or
-moved while C<rmtree> is running, and in particular on any directory
-trees with any path components or subdirectories potentially writable
-by untrusted users.
+There were race conditions 1.x implementations of C<rmtree> (although
+sometimes patched depending on the OS distribution or platform).
+This version contains code to avoid the problem mentioned in
+CVE-2002-0435.
 
 Additionally, if the C<skip_others> parameter is not set (or the
 third parameter in the traditional inferface is not TRUE) and
 C<rmtree> is interrupted, it may leave files and directories with
 permissions altered to allow deletion.
 
-C<File::Path> blindly exports C<mkpath> and C<rmtree> into the
-current namespace. These days, this is considered bad style, but
-to change it now would break too much code. Nonetheless, you are
-invited to specify what it is you are expecting to use:
+See the following pages for more information:
 
-  use File::Path 'rmtree';
+  http://www.debian.org/security/2005/dsa-696
+  http://bugs.gentoo.org/show_bug.cgi?id=75685
+  http://bugzilla.redhat.com/bugzilla/show_bug.cgi?id=157694
 
 =head1 DIAGNOSTICS
 
@@ -337,6 +342,11 @@ Please report all bugs on the RT queue:
 
 L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Path>
 
+=head1 ACKNOWLEDGEMENTS
+
+Paul Szabo is credited as having identified the race condition
+identified above, and the code changes required to address it.
+
 =head1 AUTHORS
 
 Tim Bunce <F<Tim.Bunce@ig.co.uk>> and
@@ -359,8 +369,10 @@ it under the same terms as Perl itself.
 use 5.005_04;
 use strict;
 
+use Cwd 'getcwd';
 use File::Basename ();
 use File::Spec     ();
+
 BEGIN {
     if ($] < 5.006) {
         # can't say 'opendir my $dh, $dirname'
@@ -371,7 +383,7 @@ BEGIN {
 
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT);
-$VERSION = '2.00_07';
+$VERSION = '2.00_08';
 @ISA     = qw(Exporter);
 @EXPORT  = qw(mkpath rmtree);
 
@@ -509,13 +521,41 @@ sub rmtree {
         $arg->{depth} = 0;
         $paths = [@_];
     }
+
+    $arg->{prefix} = '';
+
+    $arg->{cwd} = getcwd() or do {
+        if ($arg->{error}) {
+            push @{${$arg->{error}}}, {'' => "cannot fetch initial working directory: $!"};
+        }
+        else {
+            _carp ("cannot fetch initial working directory: $!");
+        }
+        return 0;
+    };
+    for ($arg->{cwd}) { /\A(.*)\Z/; $_ = $1 } # untaint
+
+    @{$arg}{qw(device inode)} = (stat File::Spec->curdir)[0,1] or do {
+        if ($arg->{error}) {
+            push @{${$arg->{error}}}, {'' => "cannot stat initial working directory: $!"};
+        }
+        else {
+            _carp ("cannot stat initial working directory: $!");
+        }
+        return 0;
+    };
+
     return _rmtree($arg, $paths);
 }
 
 sub _rmtree {
     my $arg   = shift;
     my $paths = shift;
-    my($count) = 0;
+
+    my $count  = 0;
+    my $curdir = File::Spec->curdir();
+    my $updir  = File::Spec->updir();
+
     my (@files, $root);
     foreach $root (@$paths) {
         if ($Is_MacOS) {
@@ -525,35 +565,66 @@ sub _rmtree {
         else {
             $root =~ s#/\z##;
         }
-        my $rp = (lstat $root)[2] or next;
-        $rp &= 07777;        # don't forget setuid, setgid, sticky bits
+        my ($ldev, $lino, $perm) = (lstat $root)[0,1,2] or next;
+        my $canon_root = $arg->{prefix}
+            ? File::Spec->catdir($arg->{prefix}, $root)
+            : $root
+        ;
+
         if ( -d _ ) {
+            if (!chdir($root)) {
+                if ($arg->{error}) {
+                    push @{${$arg->{error}}},
+                        {$canon_root => "cannot chdir: $!"};
+                }
+                else {
+                    _carp("cannot chdir to $canon_root: $!");
+                }
+                return $count;
+            }
+
+            my ($device, $inode, $perm) = (stat $curdir)[0,1,2] or do {
+                if ($arg->{error}) {
+                    push @{${$arg->{error}}},
+                        {$canon_root => "cannot stat current working directory: $!"};
+                }
+                else {
+                    _carp ("cannot stat initial working directory: $!");
+                }
+                return $count;
+            };
+
+            if ($ldev ne $device or $lino ne $inode) {
+                _croak("directory $canon_root changed before chdir, expected dev=$ldev inode=$lino, actual dev=$device ino=$inode, aborting.");
+            }
+
+            $perm &= 07777; # don't forget setuid, setgid, sticky bits
+            my $nperm = $perm | 0700;
+
             # notabene: 0700 is for making readable in the first place,
             # it's also intended to change it to writable in case we have
             # to recurse in which case we are better than rm -rf for 
             # subtrees with strange permissions
-            if (!chmod($rp | 0700,
-                ($Is_VMS ? VMS::Filespec::fileify($root) : $root))
-            ) {
-                if (!$arg->{safe}) {
-                    if ($arg->{error}) {
-                          push @{${$arg->{error}}},
-                            {$root => "Can't make directory read+writeable: $!"};
-                    }
-                    else {
-                        _carp ("Can't make directory $root read+writeable: $!");
-                    }
+
+            if (!($arg->{safe} or $nperm == $perm or chmod($nperm, $curdir))) {
+                if ($arg->{error}) {
+                    push @{${$arg->{error}}},
+                       {$root => "Can't make directory read+writeable: $!"};
                 }
+                else {
+                    _carp ("Can't make directory $root read+writeable: $!");
+                }
+                $nperm = $perm;
             }
 
             my $d;
             $d = gensym() if $] < 5.006;
-            if (!opendir $d, $root) {
+            if (!opendir $d, $curdir) {
                 if ($arg->{error}) {
-                    push @{${$arg->{error}}}, {$root => "opendir: $!"};
+                    push @{${$arg->{error}}}, {$canon_root => "opendir: $!"};
                 }
                 else {
-                    _carp ("Can't read $root: $!");
+                    _carp ("Can't read $canon_root: $!");
                 }
                 @files = ();
             }
@@ -570,31 +641,64 @@ sub _rmtree {
                 closedir $d;
             }
 
-            # Deleting large numbers of files from VMS Files-11 filesystems
-            # is faster if done in reverse ASCIIbetical order 
-            @files = reverse @files if $Is_VMS;
-            ($root = VMS::Filespec::unixify($root)) =~ s#\.dir\z## if $Is_VMS;
-            if ($Is_MacOS) {
-                @files = map("$root$_", @files);
+            if ($Is_VMS) {
+                # Deleting large numbers of files from VMS Files-11
+                # filesystems is faster if done in reverse ASCIIbetical order 
+                @files = reverse @files;
+                ($root = VMS::Filespec::unixify($root)) =~ s#\.dir\z##;
             }
-            else {
-                my $updir  = File::Spec->updir();
-                my $curdir = File::Spec->curdir();
-                @files = map(File::Spec->catfile($root,$_),
-                    grep {$_ ne $updir and $_ ne $curdir}
-                    @files
-                );
+            @files = grep {$_ ne $updir and $_ ne $curdir} @files;
+
+            if (@files) {
+                # remove the contained files before the directory itself
+                my $narg = {%$arg};
+                @{$narg}{qw(device inode cwd prefix depth)}
+                    = ($device, $inode, $updir, $canon_root, $arg->{depth}+1);
+                $count += _rmtree($narg, \@files);
             }
-            $arg->{depth}++;
-            $count += _rmtree($arg, \@files);
-            $arg->{depth}--;
+
+            # restore directory permissions of required now (in case the rmdir
+            # below fails), while we are still in the directory and may do so
+            # without a race via '.'
+            if ($nperm != $perm and not chmod($perm, $curdir)) {
+                if ($arg->{error}) {
+                    push @{${$arg->{error}}},
+                        {$canon_root => "opendir: $!"};
+                }
+                else {
+                    _carp ("Can't read $canon_root: $!");
+                }
+            }
+
+            # don't leave the client code in an unexpected directory
+            if (!chdir($arg->{cwd})) {
+                _croak("cannot chdir to $arg->{cwd} from $canon_root: $!");
+            }
+
+            # ensure that a chdir upwards didn't take us somewhere other
+            # than we expected (see CVE-2002-0435)
+            ($device, $inode) = (stat $curdir)[0,1] or do {
+                if ($arg->{error}) {
+                    push @{${$arg->{error}}},
+                        {$canon_root => "cannot stat prior working directory: $!"};
+                }
+                else {
+                    _carp ("cannot stat prior working directory: $!");
+                }
+                return $count;
+            };
+
+            if ($arg->{device} ne $device or $arg->{inode} ne $inode) {
+                _croak("previous directory $arg->{cwd} changed before entering $canon_root, expected dev=$ldev inode=$lino, actual dev=$device ino=$inode, aborting.");
+            }
+
             if ($arg->{depth} or !$arg->{keep_root}) {
                 if ($arg->{safe} &&
                     ($Is_VMS ? !&VMS::Filespec::candelete($root) : !-w $root)) {
                     print "skipped $root\n" if $arg->{verbose};
                     next;
                 }
-                if (!chmod $rp | 0700, $root) {
+                if (!chmod $perm | 0700, $root) {
                     if ($Force_Writeable) {
                         if ($arg->{error}) {
                             push @{${$arg->{error}}},
@@ -617,10 +721,10 @@ sub _rmtree {
                     else {
                         _carp ("Can't remove directory $root: $!");
                     }
-                    if (!chmod($rp,
+                    if (!chmod($perm,
                         ($Is_VMS ? VMS::Filespec::fileify($root) : $root))
                     ) {
-                        my $mask = sprintf("0%o",$rp);
+                        my $mask = sprintf("0%o",$perm);
                         if ($arg->{error}) {
                             push @{${$arg->{error}}}, {$root => "restore chmod: $!"};
                         }
@@ -632,6 +736,7 @@ sub _rmtree {
             }
         }
         else {
+            # not a directory
             if ($arg->{safe} &&
                 ($Is_VMS ? !&VMS::Filespec::candelete($root)
                          : !(-l $root || -w $root)))
@@ -639,7 +744,9 @@ sub _rmtree {
                 print "skipped $root\n" if $arg->{verbose};
                 next;
             }
-            if (!chmod $rp | 0600, $root) {
+
+            my $nperm = $perm & 07777 | 0600;
+            if ($nperm != $perm and not chmod $nperm, $root) {
                 if ($Force_Writeable) {
                     if ($arg->{error}) {
                         push @{${$arg->{error}}},
@@ -650,7 +757,7 @@ sub _rmtree {
                     }
                 }
             }
-            print "unlink $root\n" if $arg->{verbose};
+            print "unlink $canon_root\n" if $arg->{verbose};
             # delete all versions under VMS
             for (;;) {
                 if (unlink $root) {
@@ -662,11 +769,11 @@ sub _rmtree {
                             {$root => "unlink: $!"};
                     }
                     else {
-                        _carp ("Can't unlink file $root: $!");
+                        _carp ("Can't unlink file $canon_root: $!");
                     }
                     if ($Force_Writeable) {
-                        if (!chmod $rp, $root) {
-                            my $mask = sprintf("0%o",$rp);
+                        if (!chmod $perm, $root) {
+                            my $mask = sprintf("0%o",$perm);
                             if ($arg->{error}) {
                                 push @{${$arg->{error}}}, {$root => "restore chmod: $!"};
                             }

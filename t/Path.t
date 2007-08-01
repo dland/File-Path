@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 84;
+use Test::More tests => 85;
 
 BEGIN {
     use_ok('File::Path');
@@ -136,6 +136,8 @@ ok(-d $dir,  "dir a still exists");
 ok(-d $dir2, "dir z still exists");
 
 $dir = catdir($tmp_base,'F');
+# mkpath returns unix syntax filespecs on VMS
+$dir = VMS::Filespec::unixify($dir) if $^O eq 'VMS';
 
 @created = mkpath($dir, undef, 0770);
 is(scalar(@created), 1, "created directory (old style 2 verbose undef)");
@@ -227,7 +229,7 @@ SKIP: {
 
     $dir = catdir('EXTRA', '3', 'S');
     rmtree($dir, {error => \$error});
-    is( scalar(@$error), 2, 'two errors for an unreadable dir' );
+    is( scalar(@$error), 1, 'one error for an unreadable dir' );
 
     $dir = catdir('EXTRA', '3', 'T');
     rmtree($dir, {error => \$error});
@@ -262,25 +264,27 @@ SKIP: {
         $dir = catdir('EXTRA', '3', 'U');
         stderr_like( 
             sub {rmtree($dir, {verbose => 0})},
-            qr{\bCan't read \Q$dir\E: },
+            qr{\bcannot chdir to \Q$dir\E: },
             q(rmtree can't read root dir)
         );
 
         $dir = catdir('EXTRA', '3');
         stderr_like( 
             sub {rmtree($dir, {})},
-            qr{\ACan't remove directory \S+: .*? at \S+ line \d+\n},
+            qr{\Acannot chdir to \S+: .*? at \S+ line \d+
+Can't remove directory EXTRA/\d: .*? at \S+ line \d+},
             'rmtree with file owned by root'
         );
 
         stderr_like( 
             sub {rmtree('EXTRA', {})},
-            qr{\ACan't make directory EXTRA read\+writeable: .*? at \S+ line \d+
-(?:Can't remove directory EXTRA/\d: .*? at \S+ line \d+
-)+Can't unlink file [^:]+: .*? at \S+ line \d+
-Can't remove directory EXTRA: .*? at \S+ line \d+
-and can't restore permissions to \d+
- at \S+ line \d+},
+            qr{Can't remove directory [^:]+: (?:.*?) at (\S+) line (\d+)
+Can't remove directory [^:]+: (?:.*?) at \1 line \2
+cannot chdir to [^:]+: (.*?) at \1 line \2
+Can't remove directory [^:]+: (?:.*?) at \1 line \2
+Can't unlink file [^:]+: (?:.*?) at \1 line \2
+Can't remove directory [^:]+: (.*?) at \1 line \2
+and can't restore permissions to \d+},
             'rmtree with insufficient privileges'
         );
     }
@@ -351,14 +355,14 @@ and can't restore permissions to \d+
 }
 
 SKIP: {
-    skip "extra scenarios not set up, see eg/setup-extra-tests", 6
+    skip "extra scenarios not set up, see eg/setup-extra-tests", 7
         unless -d catdir(qw(EXTRA 1));
 
     rmtree 'EXTRA', {safe => 0, error => \$error};
     is( scalar(@$error), 7, 'seven deadly sins' );
 
     rmtree 'EXTRA', {safe => 1, error => \$error};
-    is( scalar(@$error), 4, 'safe is better' );
+    is( scalar(@$error), 5, 'safe is better' );
     for (@$error) {
         ($file, $message) = each %$_;
         if ($file =~  /[123]\z/) {
@@ -366,8 +370,8 @@ SKIP: {
                 or diag($message);
         }
         else {
-            is(index($message, 'unlink: '), 0, "failed to remove $file with unlink")
-                or diag($message);
+            like($message, qr(\A(?:cannot chdir|unlink): ), "failed to remove $file with unlink")
+                or diag($message)
         }
     }
 }

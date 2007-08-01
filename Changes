@@ -1,5 +1,9 @@
 Revision history for Perl extension File::Path.
 
+2.00_08
+    - Fix race condition in rmtree() as inspired by
+      http://bugs.gentoo.org/show_bug.cgi?id=79685
+
 2.00_07 2007-07-09 19:33:52 UTC
     - 2.00_06 upload unfortunately contained blib directories
 

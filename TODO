@@ -4,3 +4,6 @@ Things TODO for File::Path
    that sets up files that cannot be removed with the
    current user (and will hit code paths that are never
    visited under Unix). Useful for code coverage improvements.
+
+2. See if http://bugs.gentoo.org/show_bug.cgi?id=75696 is
+   still relevant.
