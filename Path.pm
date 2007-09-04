@@ -6,8 +6,8 @@ File::Path - Create or remove directory trees
 
 =head1 VERSION
 
-This document describes version 2.00_09 of File::Path, released
-2007-08-20.
+This document describes version 2.00_10 of File::Path, released
+2007-09-04.
 
 =head1 SYNOPSIS
 
@@ -522,7 +522,7 @@ BEGIN {
 
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT);
-$VERSION = '2.00_09';
+$VERSION = '2.00_10';
 @ISA     = qw(Exporter);
 @EXPORT  = qw(mkpath rmtree);
 
@@ -702,11 +702,11 @@ sub _rmtree {
     my (@files, $root);
     foreach $root (@$paths) {
         if ($Is_MacOS) {
-            $root = ":$root" if $root !~ /:/;
-            $root =~ s/([^:])\z/$1:/;
+            $root  = ":$root" unless $root =~ /:/;
+            $root .= ":"      unless $root =~ /:\z/;
         }
         else {
-            $root =~ s#/\z##;
+            $root =~ s{/\z}{};
         }
         my ($ldev, $lino, $perm) = (lstat $root)[0,1,2] or next;
 
@@ -769,9 +769,10 @@ sub _rmtree {
 
             if ($Is_VMS) {
                 # Deleting large numbers of files from VMS Files-11
-                # filesystems is faster if done in reverse ASCIIbetical order 
-                @files = reverse @files;
-                ($root = VMS::Filespec::unixify($root)) =~ s#\.dir\z##;
+                # filesystems is faster if done in reverse ASCIIbetical order.
+                # include '.' to '.;' from blead patch #31775
+                @files = map {$_ eq '.' ? '.;' : $_} reverse @files;
+                ($root = VMS::Filespec::unixify($root)) =~ s/\.dir\z//;
             }
             @files = grep {$_ ne $updir and $_ ne $curdir} @files;
 

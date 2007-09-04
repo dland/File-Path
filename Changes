@@ -1,5 +1,9 @@
 Revision history for Perl extension File::Path.
 
+2.00_10 2007-09-04 17:18:01 UTC
+    - Infinite loop fix in _rmtree() for VMS (perl change #31775)
+    - Documentation improvements
+
 2.00_09 2007-08-20 18:08:31 UTC
     - Fixed up a few oddments in the race prevention code
     - Reworded/reworked the diagnostics
