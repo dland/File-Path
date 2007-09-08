@@ -1,5 +1,12 @@
 Revision history for Perl extension File::Path.
 
+2.00_11 2007-09-08 12:51:30 UTC
+    - depth attribute (for keep_root functiionality) was not
+      correctly initialised in both old and new APIs
+    - initial chdir() into a child dir would fail on strange
+      protection masks (following race condition fix).
+	- delete subsequent root paths even if a previous one fails
+
 2.00_10 2007-09-04 17:18:01 UTC
     - Infinite loop fix in _rmtree() for VMS (perl change #31775)
     - Documentation improvements

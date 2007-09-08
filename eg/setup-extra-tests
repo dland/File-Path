@@ -44,7 +44,14 @@ create_file( 'EXTRA/3/M/yy', 0400, $uid, $gid );
 create_dir(  'EXTRA/3/S',    0000, $<,   $( );
 create_dir(  'EXTRA/3/T',    0000, $<,   $( );
 create_dir(  'EXTRA/3/U',    0000, $<,   $( );
+create_dir(  'EXTRA/3/V',    0700, $uid, $gid );
 symlink './M', 'EXTRA/3/N' or die "symlink: $!";
+
+# inaccessible child dir
+create_dir(  'EXTRA/5',    0700, $<,   $( );
+create_file( 'EXTRA/5/xx', 0700, $<,   $( );
+create_file( 'EXTRA/5/yy', 0700, $<,   $( );
+chmod( 0200, 'EXTRA/5' );
 
 sub create_dir {
     my $dir  = shift;

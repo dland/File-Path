@@ -6,8 +6,8 @@ File::Path - Create or remove directory trees
 
 =head1 VERSION
 
-This document describes version 2.00_10 of File::Path, released
-2007-09-04.
+This document describes version 2.00_11 of File::Path, released
+2007-09-08.
 
 =head1 SYNOPSIS
 
@@ -522,7 +522,7 @@ BEGIN {
 
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT);
-$VERSION = '2.00_10';
+$VERSION = '2.00_11';
 @ISA     = qw(Exporter);
 @EXPORT  = qw(mkpath rmtree);
 
@@ -671,11 +671,11 @@ sub rmtree {
         else {
             @{$arg}{qw(verbose safe)} = (0, 0);
         }
-        $arg->{depth} = 0;
         $paths = [@_];
     }
 
     $arg->{prefix} = '';
+    $arg->{depth}  = 0;
 
     $arg->{cwd} = getcwd() or do {
         _error($arg, "cannot fetch initial working directory");
@@ -700,6 +700,7 @@ sub _rmtree {
     my $updir  = File::Spec->updir();
 
     my (@files, $root);
+    ROOT_DIR:
     foreach $root (@$paths) {
         if ($Is_MacOS) {
             $root  = ":$root" unless $root =~ /:/;
@@ -708,7 +709,7 @@ sub _rmtree {
         else {
             $root =~ s{/\z}{};
         }
-        my ($ldev, $lino, $perm) = (lstat $root)[0,1,2] or next;
+        my ($ldev, $lino, $perm) = (lstat $root)[0,1,2] or next ROOT_DIR;
 
         # since we chdir into each directory, it may not be obvious
         # to figure out where we are if we generate a message about
@@ -723,13 +724,23 @@ sub _rmtree {
 
         if ( -d _ ) {
             if (!chdir($root)) {
-                _error($arg, "cannot chdir to child", $canon);
-                return $count;
+                # see if we can escalate privileges to get in
+                # (e.g. funny protection mask such as -w- instead of rwx)
+                $perm &= 07777;
+                my $nperm = $perm | 0700;
+                if (!($arg->{safe} or $nperm == $perm or chmod($nperm, $root))) {
+                    _error($arg, "cannot make child directory read-write-exec", $canon);
+                    next ROOT_DIR;
+                }
+                elsif (!chdir($root)) {
+                    _error($arg, "cannot chdir to child", $canon);
+                    next ROOT_DIR;
+                }
             }
 
             my ($device, $inode, $perm) = (stat $curdir)[0,1,2] or do {
                 _error($arg, "cannot stat current working directory", $canon);
-                return $count;
+                next ROOT_DIR;
             };
 
             ($ldev eq $device and $lino eq $inode)
@@ -807,7 +818,7 @@ sub _rmtree {
                 if ($arg->{safe} &&
                     ($Is_VMS ? !&VMS::Filespec::candelete($root) : !-w $root)) {
                     print "skipped $root\n" if $arg->{verbose};
-                    next;
+                    next ROOT_DIR;
                 }
                 if (!chmod $perm | 0700, $root) {
                     if ($Force_Writeable) {
@@ -835,7 +846,7 @@ sub _rmtree {
                          : !(-l $root || -w $root)))
             {
                 print "skipped $root\n" if $arg->{verbose};
-                next;
+                next ROOT_DIR;
             }
 
             my $nperm = $perm & 07777 | 0600;

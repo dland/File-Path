@@ -8,4 +8,5 @@ README
 TODO
 eg/setup-extra-tests
 t/Path.t
+t/pod.t
 t/taint.t
