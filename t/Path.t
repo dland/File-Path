@@ -12,6 +12,8 @@ BEGIN {
 eval "use Test::Output";
 my $has_Test_Output = $@ ? 0 : 1;
 
+my $Is_VMS   = $^O eq 'VMS';
+
 # first check for stupid permissions second for full, so we clean up
 # behind ourselves
 for my $perm (0111,0777) {
@@ -82,7 +84,7 @@ is(scalar(@created), 0, "skipped making existing directories (old style 1)")
 
 $dir = catdir($tmp_base,'C');
 # mkpath returns unix syntax filespecs on VMS
-$dir = VMS::Filespec::unixify($dir) if $^O eq 'VMS';
+$dir = VMS::Filespec::unixify($dir) if $Is_VMS;
 @created = mkpath($tmp_base, $dir);
 is(scalar(@created), 1, "created directory (new style 1)");
 is($created[0], $dir, "created directory (new style 1) cross-check");
@@ -93,7 +95,7 @@ is(scalar(@created), 0, "skipped making existing directories (old style 2)")
 
 $dir2 = catdir($tmp_base,'D');
 # mkpath returns unix syntax filespecs on VMS
-$dir2 = VMS::Filespec::unixify($dir2) if $^O eq 'VMS';
+$dir2 = VMS::Filespec::unixify($dir2) if $Is_VMS;
 @created = mkpath($tmp_base, $dir, $dir2);
 is(scalar(@created), 1, "created directory (new style 2)");
 is($created[0], $dir2, "created directory (new style 2) cross-check");
@@ -137,7 +139,7 @@ ok(-d $dir2, "dir z still exists");
 
 $dir = catdir($tmp_base,'F');
 # mkpath returns unix syntax filespecs on VMS
-$dir = VMS::Filespec::unixify($dir) if $^O eq 'VMS';
+$dir = VMS::Filespec::unixify($dir) if $Is_VMS;
 
 @created = mkpath($dir, undef, 0770);
 is(scalar(@created), 1, "created directory (old style 2 verbose undef)");
@@ -155,7 +157,7 @@ is($created[0], $dir, "created directory (old style 3 mode undef) cross-check");
 is(rmtree($dir, 0, undef), 1, "removed directory 3 verbose undef");
 
 $dir = catdir($tmp_base,'G');
-$dir = VMS::Filespec::unixify($dir) if $^O eq 'VMS';
+$dir = VMS::Filespec::unixify($dir) if $Is_VMS;
 
 @created = mkpath($dir, undef, 0200);
 is(scalar(@created), 1, "created write-only dir");

@@ -6,8 +6,8 @@ File::Path - Create or remove directory trees
 
 =head1 VERSION
 
-This document describes version 2.00_11 of File::Path, released
-2007-09-08.
+This document describes version 2.01 of File::Path, released
+2007-09-29.
 
 =head1 SYNOPSIS
 
@@ -93,11 +93,14 @@ in an C<eval> block.
 If present, will cause C<rmtree> to print the name of each file as
 it is unlinked. By default nothing is printed.
 
-=item skip_others
+=item safe
 
 When set to a true value, will cause C<rmtree> to skip the files
 for which the process lacks the required privileges needed to delete
-files, such as delete privileges on VMS.
+files, such as delete privileges on VMS. In other words, the code
+will make no attempt to alter file permissions. Thus, if the process
+is interrupted, no filesystem object will be left in a more
+permissive mode.
 
 =item keep_root
 
@@ -316,8 +319,8 @@ See the following pages for more information:
   http://www.nntp.perl.org/group/perl.perl5.porters/2005/01/msg97623.html
   http://www.debian.org/security/2005/dsa-696
 
-Additionally, unless the C<skip_others> parameter is set (or the
-third parameter in the traditional inferface is TRUE), should a
+Additionally, unless the C<safe> parameter is set (or the
+third parameter in the traditional interface is TRUE), should a
 C<rmtree> be interrupted, files that were originally in read-only
 mode may now have their permissions set to a read-write (or "delete
 OK") mode.
@@ -338,7 +341,7 @@ they will be C<carp>ed about. Program execution will not be halted.
 
 =over 4
 
-=item mkdir [ppath]: [errmsg] (SEVERE)
+=item mkdir [path]: [errmsg] (SEVERE)
 
 C<mkpath> was unable to create the path. Probably some sort of
 permissions error at the point of departure, or insufficient resources
@@ -454,7 +457,7 @@ C<rmtree> failed to remove a file. Probably a permissions issue.
 =item cannot restore permissions of [file] to [0nnn]: [errmsg]
 
 After having failed to remove a file, C<rmtree> was also unable
-to restore the permissions on the file to a possibily less permissive
+to restore the permissions on the file to a possibly less permissive
 setting. (Permissions given in octal).
 
 =back
@@ -482,7 +485,7 @@ L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Path>
 
 =head1 ACKNOWLEDGEMENTS
 
-Paul Szabo identified the race condition orignially, and Brendan
+Paul Szabo identified the race condition originally, and Brendan
 O'Dea wrote an implementation for Debian that addressed the problem.
 That code was used as a basis for the current code. Their efforts
 are greatly appreciated.
@@ -522,7 +525,7 @@ BEGIN {
 
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT);
-$VERSION = '2.00_11';
+$VERSION = '2.01';
 @ISA     = qw(Exporter);
 @EXPORT  = qw(mkpath rmtree);
 
@@ -709,7 +712,6 @@ sub _rmtree {
         else {
             $root =~ s{/\z}{};
         }
-        my ($ldev, $lino, $perm) = (lstat $root)[0,1,2] or next ROOT_DIR;
 
         # since we chdir into each directory, it may not be obvious
         # to figure out where we are if we generate a message about
@@ -718,11 +720,14 @@ sub _rmtree {
         # opposed to being truly canonical, anchored from the root (/).
 
         my $canon = $arg->{prefix}
-            ? File::Spec->catdir($arg->{prefix}, $root)
+            ? File::Spec->catfile($arg->{prefix}, $root)
             : $root
         ;
 
+        my ($ldev, $lino, $perm) = (lstat $root)[0,1,2] or next ROOT_DIR;
+
         if ( -d _ ) {
+            $root = VMS::Filespec::pathify($root) if $Is_VMS;
             if (!chdir($root)) {
                 # see if we can escalate privileges to get in
                 # (e.g. funny protection mask such as -w- instead of rwx)
@@ -841,6 +846,10 @@ sub _rmtree {
         }
         else {
             # not a directory
+
+            $root = VMS::Filespec::vmsify("./$root")
+                if $Is_VMS && !File::Spec->file_name_is_absolute($root);
+
             if ($arg->{safe} &&
                 ($Is_VMS ? !&VMS::Filespec::candelete($root)
                          : !(-l $root || -w $root)))
