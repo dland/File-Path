@@ -1,5 +1,9 @@
 Revision history for Perl extension File::Path.
 
+2.02 2007-10-24 10:05:30 UTC
+    - documentation correction fix only: corrected name of module
+      File::Find::Rule. Users need not upgrade.
+
 2.01 2007-09-29 10:16:34 UTC
     - the documentation referred to 'skip_others', but the attribute
       is named 'safe'.

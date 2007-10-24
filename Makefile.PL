@@ -8,9 +8,14 @@ use ExtUtils::MakeMaker;
 eval "use ExtUtils::MakeMaker::Coverage";
 $@ or print "Adding testcover target\n";
 
-my @license = $ExtUtils::MakeMaker::VERSION > 6.30
+my @license =
+    do {
+        my $version = $ExtUtils::MakeMaker::VERSION;
+        $version =~ tr/_//d;
+        $version} > 6.30
     ? qw(LICENSE perl)
     : ();
+
 
 WriteMakefile(
     NAME          => 'File::Path',

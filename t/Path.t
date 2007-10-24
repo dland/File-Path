@@ -101,10 +101,11 @@ is(scalar(@created), 1, "created directory (new style 2)");
 is($created[0], $dir2, "created directory (new style 2) cross-check");
 
 $count = rmtree($dir, 0);
-is($count, 1, "removed directory (old style 1)");
+is($count, 1, "removed directory unsafe mode");
 
 $count = rmtree($dir2, 0, 1);
-is($count, 1, "removed directory (old style 2)");
+my $removed = $Is_VMS ? 0 : 1;
+is($count, $removed, "removed directory safe mode");
 
 # mkdir foo ./E/../Y
 # Y should exist
