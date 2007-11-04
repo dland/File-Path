@@ -22,6 +22,7 @@ WriteMakefile(
     VERSION_FROM  => 'Path.pm',
     ABSTRACT_FROM => 'Path.pm',
     AUTHOR        => 'David Landgren',
+    INSTALLDIRS   => ($] >= 5.008001 ? 'perl' : 'site'),
     PREREQ_PM => {
         'File::Basename' => 0,
         'File::Spec'     => 0,

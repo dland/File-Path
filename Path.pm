@@ -17,7 +17,7 @@ BEGIN {
 
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT);
-$VERSION = '2.02';
+$VERSION = '2.03';
 @ISA     = qw(Exporter);
 @EXPORT  = qw(mkpath rmtree);
 
@@ -386,8 +386,8 @@ File::Path - Create or remove directory trees
 
 =head1 VERSION
 
-This document describes version 2.02 of File::Path, released
-2007-10-24.
+This document describes version 2.03 of File::Path, released
+2007-11-04.
 
 =head1 SYNOPSIS
 
@@ -845,6 +845,15 @@ setting. (Permissions given in octal).
 =head1 SEE ALSO
 
 =over 4
+
+=item *
+
+L<File::Remove>
+
+Allows files and directories to be moved to the Trashcan/Recycle
+Bin (where they may later be restored if necessary) if the operating
+system supports such functionality. This feature may one day be
+made available directly in C<File::Path>.
 
 =item *
 

@@ -1,5 +1,13 @@
 Revision history for Perl extension File::Path.
 
+2.03 2007-11-04 18:11:51 UTC
+    - On 5.8.x, the installation would be shadowed by the core
+      files, and thus not be visible. Makefile.PL tweaked
+      appropriately to ensure that the installation overwrites
+      the core files. Users on 5.6 and below need not upgrade,
+      users on 5.8 should. Bug spotted by imacat (#30459).
+    - Minor changes to the way POD tests are initialised.
+
 2.02 2007-10-24 10:05:30 UTC
     - documentation correction fix only: corrected name of module
       File::Find::Rule. Users need not upgrade.
