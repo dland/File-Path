@@ -17,7 +17,7 @@ BEGIN {
 
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT);
-$VERSION = '2.03';
+$VERSION = '2.04';
 @ISA     = qw(Exporter);
 @EXPORT  = qw(mkpath rmtree);
 
@@ -26,8 +26,7 @@ my $Is_MacOS = $^O eq 'MacOS';
 
 # These OSes complain if you want to remove a file that you have no
 # write permission to:
-my $Force_Writeable = ($^O eq 'os2' || $^O eq 'dos' || $^O eq 'MSWin32' ||
-                       $^O eq 'amigaos' || $^O eq 'MacOS' || $^O eq 'epoc');
+my $Force_Writeable = grep {$^O eq $_} qw(amigaos dos epoc MSWin32 MacOS os2);
 
 sub _carp {
     require Carp;
@@ -338,9 +337,10 @@ sub _rmtree {
         }
         else {
             # not a directory
-
             $root = VMS::Filespec::vmsify("./$root")
-                if $Is_VMS && !File::Spec->file_name_is_absolute($root);
+                if $Is_VMS
+                   && !File::Spec->file_name_is_absolute($root)
+                   && ($root !~ m/(?<!\^)[\]>]+/);  # not already in VMS syntax
 
             if ($arg->{safe} &&
                 ($Is_VMS ? !&VMS::Filespec::candelete($root)
@@ -386,8 +386,8 @@ File::Path - Create or remove directory trees
 
 =head1 VERSION
 
-This document describes version 2.03 of File::Path, released
-2007-11-04.
+This document describes version 2.04 of File::Path, released
+2007-11-13.
 
 =head1 SYNOPSIS
 

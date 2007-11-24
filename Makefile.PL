@@ -12,10 +12,14 @@ my @license =
     do {
         my $version = $ExtUtils::MakeMaker::VERSION;
         $version =~ tr/_//d;
-        $version} > 6.30
+        $version
+    } > 6.30
     ? qw(LICENSE perl)
     : ();
 
+my @extra_prereq = (
+    $] < 5.006 ? ('Symbol' => 0) : (),
+);
 
 WriteMakefile(
     NAME          => 'File::Path',
@@ -24,9 +28,11 @@ WriteMakefile(
     AUTHOR        => 'David Landgren',
     INSTALLDIRS   => ($] >= 5.008001 ? 'perl' : 'site'),
     PREREQ_PM => {
+        'Carp'           => 0,
+        'Cwd'            => 0,
         'File::Basename' => 0,
         'File::Spec'     => 0,
-        'Cwd'            => 0,
+        @extra_prereq,
     },
     clean => {
         FILES => 'cover_db',

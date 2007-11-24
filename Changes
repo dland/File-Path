@@ -1,5 +1,11 @@
 Revision history for Perl extension File::Path.
 
+2.04 2007-11-22 13:43:34 UTC
+    - integrate blead change #32276 (rmtree a file on VMS)
+      (see http://www.nntp.perl.org/group/perl.perl5.changes/2007/11/msg20108.html)
+    - add a test to show that we can rmtree() a file
+    - specify core prereqs in Makefile.PL (as per cpants)
+
 2.03 2007-11-04 18:11:51 UTC
     - On 5.8.x, the installation would be shadowed by the core
       files, and thus not be visible. Makefile.PL tweaked

@@ -13,12 +13,12 @@ if (!$ENV{PERL_AUTHOR_TESTING}) {
 }
 
 my @file;
-if (open my $MAN, '<', 'MANIFEST') {
-    while (<$MAN>) {
+if (open MAN, '< MANIFEST') {
+    while (<MAN>) {
         chomp;
         push @file, $_ if /\.pm$/;
     }
-    close $MAN;
+    close MAN;
 }
 else {
     diag "failed to read MANIFEST: $!";

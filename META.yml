@@ -1,11 +1,12 @@
 --- #YAML:1.0
 name:                File-Path
-version:             2.03
+version:             2.04
 abstract:            Create or remove directory trees
 license:             perl
 generated_by:        ExtUtils::MakeMaker version 6.36
 distribution_type:   module
 requires:     
+    Carp:                          0
     Cwd:                           0
     File::Basename:                0
     File::Spec:                    0
