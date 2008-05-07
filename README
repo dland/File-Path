@@ -1,4 +1,4 @@
-This file is the README for File::Path version 2.04
+This file is the README for File::Path version 2.05
 
 INSTALLATION
 
@@ -12,6 +12,7 @@ TESTING
 This module requires the following modules for thorough testing:
 
   (These are core, you should be ok)
+  Cwd
   File::Path
   File::Spec::Functions
   Test::More
@@ -46,15 +47,14 @@ L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Path>
 
 AUTHORS
 
-Tim Bunce <Tim.Bunce@ig.co.uk> and
-Charles Bailey <bailey@newman.upenn.edu>.
+Tim Bunce and Charles Bailey.
 
 Currently maintained by David Landgren <david@landgren.net>.
 
 COPYRIGHT
 
 This module is copyright (C) Charles Bailey, Tim Bunce and
-David Landgren 1995-2007.  All rights reserved.
+David Landgren 1995-2008.  All rights reserved.
 
 LICENSE
 

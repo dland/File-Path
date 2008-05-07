@@ -1,5 +1,11 @@
 Revision history for Perl extension File::Path.
 
+2.05 2008-05-07 08:20:20 UTC
+    - better diagnosics and less panicking when
+      removing an ancestor path. Reported by Alan Ferrency
+      and patch suggested by Michael Schilli (#31721).
+    - fix typo spotted by Brendan O'Dea (#35623).
+
 2.04 2007-11-22 13:43:34 UTC
     - integrate blead change #32276 (rmtree a file on VMS)
       (see http://www.nntp.perl.org/group/perl.perl5.changes/2007/11/msg20108.html)

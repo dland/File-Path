@@ -17,7 +17,7 @@ BEGIN {
 
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT);
-$VERSION = '2.04';
+$VERSION = '2.05';
 @ISA     = qw(Exporter);
 @EXPORT  = qw(mkpath rmtree);
 
@@ -45,7 +45,8 @@ sub _error {
 
     if ($arg->{error}) {
         $object = '' unless defined $object;
-        push @{${$arg->{error}}}, {$object => "$message: $!"};
+        $message .= ": $!" if $!;
+        push @{${$arg->{error}}}, {$object => $message};
     }
     else {
         _carp(defined($object) ? "$message for $object: $!" : "$message: $!");
@@ -196,6 +197,11 @@ sub _rmtree {
     my (@files, $root);
     ROOT_DIR:
     foreach $root (@$paths) {
+        if ($root eq substr($arg->{cwd}, 0, length($root))) {
+            $! = 0;
+            _error($arg, "cannot remove path when cwd is $arg->{cwd}", $root);
+            return 0;
+        }
         if ($Is_MacOS) {
             $root  = ":$root" unless $root =~ /:/;
             $root .= ":"      unless $root =~ /:\z/;
@@ -240,7 +246,7 @@ sub _rmtree {
             };
 
             ($ldev eq $device and $lino eq $inode)
-                or _croak("directory $canon changed before chdir, expected dev=$ldev inode=$lino, actual dev=$device ino=$inode, aborting.");
+                or _croak("directory $canon changed before chdir, expected dev=$ldev ino=$lino, actual dev=$device ino=$inode, aborting.");
 
             $perm &= 07777; # don't forget setuid, setgid, sticky bits
             my $nperm = $perm | 0700;
@@ -308,7 +314,7 @@ sub _rmtree {
                 or _croak("cannot stat prior working directory $arg->{cwd}: $!, aborting.");
 
             ($arg->{device} eq $device and $arg->{inode} eq $inode)
-                or _croak("previous directory $arg->{cwd} changed before entering $canon, expected dev=$ldev inode=$lino, actual dev=$device ino=$inode, aborting.");
+                or _croak("previous directory $arg->{cwd} changed before entering $canon, expected dev=$ldev ino=$lino, actual dev=$device ino=$inode, aborting.");
 
             if ($arg->{depth} or !$arg->{keep_root}) {
                 if ($arg->{safe} &&
@@ -386,8 +392,8 @@ File::Path - Create or remove directory trees
 
 =head1 VERSION
 
-This document describes version 2.04 of File::Path, released
-2007-11-13.
+This document describes version 2.05 of File::Path, released
+2008-05-07.
 
 =head1 SYNOPSIS
 
@@ -624,7 +630,7 @@ references. For each hash reference, the key is the name of the
 file, and the value is the error message (usually the contents of
 C<$!>). An example usage looks like:
 
-  rmpath( 'foo/bar', 'bar/rat', {error => \my $err} );
+  rmtree( 'foo/bar', 'bar/rat', {error => \my $err} );
   for my $diag (@$err) {
     my ($file, $message) = each %$diag;
     print "problem unlinking $file: $message\n";
@@ -636,7 +642,7 @@ is encountered (for instance, C<rmtree> attempts to remove a directory
 tree that does not exist), the diagnostic key will be empty, only
 the value will be set:
 
-  rmpath( '/no/such/path', {error => \my $err} );
+  rmtree( '/no/such/path', {error => \my $err} );
   for my $diag (@$err) {
     my ($file, $message) = each %$diag;
     if ($file eq '') {
@@ -757,7 +763,7 @@ begin deleting the objects therein, but was unsuccessful. This is
 usually a permissions issue. The routine will continue to delete
 other things, but this directory will be left intact.
 
-=item directory [dir] changed before chdir, expected dev=[n] inode=[n], actual dev=[n] ino=[n], aborting. (FATAL)
+=item directory [dir] changed before chdir, expected dev=[n] ino=[n], actual dev=[n] ino=[n], aborting. (FATAL)
 
 C<rmtree> recorded the device and inode of a directory, and then
 moved into it. It then performed a C<stat> on the current directory
@@ -786,11 +792,20 @@ C<rmtree>, after having deleted everything in a directory, attempted
 to restore its permissions to the original state but failed. The
 directory may wind up being left behind.
 
+=item cannot remove [dir] when cwd is [dir]
+
+The current working directory of the program is F</some/path/to/here>
+and you are attempting to remove an ancestor, such as F</some/path>.
+The directory tree is left untouched.
+
+The solution is to C<chdir> out of the child directory to a place
+outside the directory tree to be removed.
+
 =item cannot chdir to [parent-dir] from [child-dir]: [errmsg], aborting. (FATAL)
 
 C<rmtree>, after having deleted everything and restored the permissions
-of a directory, was unable to chdir back to the parent. This is usually
-a sign that something evil this way comes.
+of a directory, was unable to chdir back to the parent. The program
+halts to avoid a race condition from occurring.
 
 =item cannot stat prior working directory [dir]: [errmsg], aborting. (FATAL)
 
@@ -799,7 +814,7 @@ from the child. Since there is no way of knowing if we returned to
 where we think we should be (by comparing device and inode) the only
 way out is to C<croak>.
 
-=item previous directory [parent-dir] changed before entering [child-dir], expected dev=[n] inode=[n], actual dev=[n] ino=[n], aborting. (FATAL)
+=item previous directory [parent-dir] changed before entering [child-dir], expected dev=[n] ino=[n], actual dev=[n] ino=[n], aborting. (FATAL)
 
 When C<rmtree> returned from deleting files in a child directory, a
 check revealed that the parent directory it returned to wasn't the one
@@ -881,14 +896,13 @@ are greatly appreciated.
 
 =head1 AUTHORS
 
-Tim Bunce <F<Tim.Bunce@ig.co.uk>> and Charles Bailey
-<F<bailey@newman.upenn.edu>>. Currently maintained by David Landgren
+Tim Bunce and Charles Bailey. Currently maintained by David Landgren
 <F<david@landgren.net>>.
 
 =head1 COPYRIGHT
 
 This module is copyright (C) Charles Bailey, Tim Bunce and
-David Landgren 1995-2007. All rights reserved.
+David Landgren 1995-2008. All rights reserved.
 
 =head1 LICENSE
 
