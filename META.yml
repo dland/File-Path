@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                File-Path
-version:             2.05
+version:             2.06
 abstract:            Create or remove directory trees
 license:             perl
 author:              

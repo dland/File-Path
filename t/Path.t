@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 106;
+use Test::More tests => 112;
 
 BEGIN {
     use_ok('Cwd');
@@ -79,6 +79,59 @@ is(scalar(@created), 0, "Can't create a directory named ''");
 
 my $dir;
 my $dir2;
+
+sub gisle {
+    # background info: @_ = 1; !shift # gives '' not 0
+    # Message-Id: <3C820CE6-4400-4E91-AF43-A3D19B356E68@activestate.com>
+    # http://www.nntp.perl.org/group/perl.perl5.porters/2008/05/msg136625.html
+    mkpath(shift, !shift, 0755);
+}
+
+sub count {
+    opendir D, shift or return -1;
+    my $count = () = readdir D;
+    close D;
+    return $count;
+}
+
+{
+    mkdir 'solo', 0755;
+    chdir 'solo';
+    my $before = count(curdir());
+    cmp_ok($before, '>', 0, "baseline $before");
+
+    gisle('1st', 1);
+    is(count(curdir()), $before + 1, "first after $before");
+
+    $before = count(curdir());
+    gisle('2nd', 1);
+    is(count(curdir()), $before + 1, "second after $before");
+
+    chdir updir();
+    rmtree 'solo';
+}
+
+{
+    mkdir 'solo', 0755;
+    chdir 'solo';
+    my $before = count(curdir());
+    cmp_ok($before, '>', 0, "ARGV $before");
+    {
+        local @ARGV = (1);
+        mkpath('3rd', !shift, 0755);
+    }
+    is(count(curdir()), $before + 1, "third after $before");
+
+    $before = count(curdir());
+    {
+        local @ARGV = (1);
+        mkpath('4th', !shift, 0755);
+    }
+    is(count(curdir()), $before + 1, "fourth after $before");
+
+    chdir updir();
+    rmtree 'solo';
+}
 
 SKIP: {
     $dir = catdir($tmp_base, 'B');
@@ -298,7 +351,7 @@ SKIP: {
 }
 
 SKIP: {
-    skip 'Test::Output not available', 14
+    skip 'Test::Output not available', 20
         unless $has_Test_Output;
 
     SKIP: {
@@ -405,7 +458,8 @@ cannot restore permissions to \d+ for [^:]+: .* at \1 line \2},
     }
 
     SKIP: {
-        my $nr_tests = 5;
+        # tests for rmpath() of ancestor directory
+        my $nr_tests = 6;
         my $cwd = getcwd() or skip "failed to getcwd: $!", $nr_tests;
         my $dir  = catdir($cwd, 'remove');
         my $dir2 = catdir($cwd, 'remove', 'this', 'dir');
