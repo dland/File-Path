@@ -90,7 +90,7 @@ sub gisle {
 sub count {
     opendir D, shift or return -1;
     my $count = () = readdir D;
-    close D;
+    closedir D or return -1;
     return $count;
 }
 
