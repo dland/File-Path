@@ -134,6 +134,42 @@ sub count {
 }
 
 SKIP: {
+    # tests for rmpath() of ancestor directory
+    my $nr_tests = 6;
+    my $cwd = getcwd() or skip "failed to getcwd: $!", $nr_tests;
+    my $dir  = catdir($cwd, 'remove');
+    my $dir2 = catdir($cwd, 'remove', 'this', 'dir');
+
+    skip "failed to mkpath '$dir2': $!", $nr_tests
+        unless mkpath($dir2, {verbose => 0});
+    skip "failed to chdir dir '$dir2': $!", $nr_tests
+        unless chdir($dir2);
+
+    rmtree($dir, {error => \$error});
+    my $nr_err = @$error;
+    is($nr_err, 1, "ancestor error");
+
+    if ($nr_err) {
+        my ($file, $message) = each %{$error->[0]};
+        is($file, $dir, "ancestor named");
+        my $ortho_dir = $^O eq 'MSWin32' ? File::Path::_slash_lc($dir2) : $dir2;
+        $^O eq 'MSWin32' and $message =~ s/(\S+)\Z/File::Path::_slash_lc($1)/e;
+        is($message, "cannot remove path when cwd is $ortho_dir", "ancestor reason");
+        ok(-d $dir2, "child not removed");
+        ok(-d $dir, "ancestor not removed");
+    }
+    else {
+        fail( "ancestor 1");
+        fail( "ancestor 2");
+        fail( "ancestor 3");
+        fail( "ancestor 4");
+    }
+    chdir $cwd;
+    rmtree($dir);
+    ok(!(-d $dir), "ancestor now removed");
+};
+
+SKIP: {
     $dir = catdir($tmp_base, 'B');
     $dir2 = catdir($dir, updir());
     # IOW: File::Spec->catdir( qw(foo bar), File::Spec->updir ) eq 'foo'
@@ -351,7 +387,7 @@ SKIP: {
 }
 
 SKIP: {
-    skip 'Test::Output not available', 20
+    skip 'Test::Output not available', 14
         unless $has_Test_Output;
 
     SKIP: {
@@ -456,40 +492,6 @@ cannot restore permissions to \d+ for [^:]+: .* at \1 line \2},
             'rmtree safe verbose (new style)'
         );
     }
-
-    SKIP: {
-        # tests for rmpath() of ancestor directory
-        my $nr_tests = 6;
-        my $cwd = getcwd() or skip "failed to getcwd: $!", $nr_tests;
-        my $dir  = catdir($cwd, 'remove');
-        my $dir2 = catdir($cwd, 'remove', 'this', 'dir');
-
-        skip "failed to mkpath '$dir2': $!", $nr_tests
-            unless mkpath($dir2, {verbose => 0});
-        skip "failed to chdir dir '$dir2': $!", $nr_tests
-            unless chdir($dir2);
-
-        rmtree($dir, {error => \$error});
-        my $nr_err = @$error;
-        is($nr_err, 1, "ancestor error");
-
-        if ($nr_err) {
-            my ($file, $message) = each %{$error->[0]};
-            is($file, $dir, "ancestor named");
-            is($message, "cannot remove path when cwd is $dir2", "ancestor reason");
-            ok(-d $dir2, "child not removed");
-            ok(-d $dir, "ancestor not removed");
-        }
-        else {
-            fail( "ancestor 1");
-            fail( "ancestor 2");
-            fail( "ancestor 3");
-            fail( "ancestor 4");
-        }
-        chdir $cwd;
-        rmtree($dir);
-        ok(!(-d $dir), "ancestor now removed");
-    };
 }
 
 SKIP: {
