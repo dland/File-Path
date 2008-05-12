@@ -1,5 +1,11 @@
 Revision history for Perl extension File::Path.
 
+2.06_02 2008-05-12 09:53:39 UTC
+    - Problem on Windows where c:\path\to\dir was not considered
+      to be underneath C:/Path/To (issues of directory separators
+      and case sensitivity). As reported in smoke report
+      http://www.nntp.perl.org/group/perl.cpan.testers/2008/05/msg1435813.html
+
 2.06_01 2008-05-10 20:54:35 UTC
     - Close directory handle in t/Path.t with closedir (close is
       close but incorrect). Problem identified with Strawberry

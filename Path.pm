@@ -17,7 +17,7 @@ BEGIN {
 
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT);
-$VERSION = '2.06_01';
+$VERSION = '2.06_02';
 @ISA     = qw(Exporter);
 @EXPORT  = qw(mkpath rmtree);
 
@@ -197,7 +197,10 @@ sub _rmtree {
     my (@files, $root);
     ROOT_DIR:
     foreach $root (@$paths) {
-        if ($root eq substr($arg->{cwd}, 0, length($root))) {
+        # need to fixup \ to / on Windows
+        my $ortho_root = $^O eq 'MSWin32' ? _slash_lc($root)       : $root;
+        my $ortho_cwd  = $^O eq 'MSWin32' ? _slash_lc($arg->{cwd}) : $arg->{cwd};
+        if ($ortho_root eq substr($ortho_cwd, 0, length($ortho_root))) {
             $! = 0;
             _error($arg, "cannot remove path when cwd is $arg->{cwd}", $root);
             return 0;
@@ -379,8 +382,15 @@ sub _rmtree {
             }
         }
     }
-
     return $count;
+}
+
+sub _slash_lc {
+    # fix up slashes and case on MSWin32 so that we can determine that
+    # c:\path\to\dir is underneath C:/Path/To
+    my $path = shift;
+    $path =~ tr{\\}{/};
+    return lc($path);
 }
 
 1;
@@ -392,8 +402,8 @@ File::Path - Create or remove directory trees
 
 =head1 VERSION
 
-This document describes version 2.06_01 of File::Path, released
-2008-05-10.
+This document describes version 2.06_02 of File::Path, released
+2008-05-12.
 
 =head1 SYNOPSIS
 
