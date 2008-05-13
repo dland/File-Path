@@ -17,7 +17,7 @@ BEGIN {
 
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT);
-$VERSION = '2.06_03';
+$VERSION = '2.06_04';
 @ISA     = qw(Exporter);
 @EXPORT  = qw(mkpath rmtree);
 
@@ -402,8 +402,8 @@ File::Path - Create or remove directory trees
 
 =head1 VERSION
 
-This document describes version 2.06_03 of File::Path, released
-2008-05-12.
+This document describes version 2.06_04 of File::Path, released
+2008-05-13.
 
 =head1 SYNOPSIS
 

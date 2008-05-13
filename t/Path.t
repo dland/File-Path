@@ -153,7 +153,8 @@ SKIP: {
         my ($file, $message) = each %{$error->[0]};
         is($file, $dir, "ancestor named");
         my $ortho_dir = $^O eq 'MSWin32' ? File::Path::_slash_lc($dir2) : $dir2;
-        $^O eq 'MSWin32' and $message =~ s/(\S+)\Z/File::Path::_slash_lc($1)/e;
+        $^O eq 'MSWin32' and $message
+            =~ s/\A(cannot remove path when cwd is )(.*)\Z/$1 . File::Path::_slash_lc($2)/e;
         is($message, "cannot remove path when cwd is $ortho_dir", "ancestor reason");
         ok(-d $dir2, "child not removed");
         ok(-d $dir, "ancestor not removed");

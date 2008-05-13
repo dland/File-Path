@@ -1,5 +1,9 @@
 Revision history for Perl extension File::Path.
 
+2.06_04 2008-05-13 14:28:10 UTC
+    - Can't use \S+ if a directory name contains a space (which
+      it will may do on Windows (the continuing saga of CPAN #35708)).
+
 2.06_03 2008-05-12 20:17:33 UTC
     - ancestor removal test getting slashed up on Windows
       (see CPAN #35708).
