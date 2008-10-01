@@ -16,13 +16,14 @@ BEGIN {
 }
 
 use Exporter ();
-use vars qw($VERSION @ISA @EXPORT);
-$VERSION = '2.06_04';
-@ISA     = qw(Exporter);
-@EXPORT  = qw(mkpath rmtree);
+use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
+$VERSION   = '2.06_05';
+@ISA       = qw(Exporter);
+@EXPORT    = qw(mkpath rmtree);
+@EXPORT_OK = qw(make_path rm_tree);
 
-my $Is_VMS   = $^O eq 'VMS';
-my $Is_MacOS = $^O eq 'MacOS';
+my $Is_VMS     = $^O eq 'VMS';
+my $Is_MacOS   = $^O eq 'MacOS';
 
 # These OSes complain if you want to remove a file that you have no
 # write permission to:
@@ -53,15 +54,13 @@ sub _error {
     }
 }
 
+sub make_path {
+    push @_, {} if !@_ or (@_ and !UNIVERSAL::isa($_[-1],'HASH'));
+    goto &mkpath;
+}
+
 sub mkpath {
-    my $old_style = (
-        UNIVERSAL::isa($_[0],'ARRAY')
-        or (@_ == 2 and (defined $_[1] ? $_[1] =~ /\A\d+\z/ : 1))
-        or (@_ == 3
-            and (defined $_[1] ? $_[1] =~ /\A\d*\z/ : 1)
-            and (defined $_[2] ? $_[2] =~ /\A\d+\z/ : 1)
-        )
-    ) ? 1 : 0;
+    my $old_style = !(@_ > 0 and UNIVERSAL::isa($_[-1],'HASH'));
 
     my $arg;
     my $paths;
@@ -74,15 +73,11 @@ sub mkpath {
         $arg->{mode}    = defined $mode    ? $mode    : 0777;
     }
     else {
-        if (@_ > 0 and UNIVERSAL::isa($_[-1], 'HASH')) {
-            $arg = pop @_;
-            exists $arg->{mask} and $arg->{mode} = delete $arg->{mask};
-            $arg->{mode} = 0777 unless exists $arg->{mode};
-            ${$arg->{error}} = [] if exists $arg->{error};
-        }
-        else {
-            @{$arg}{qw(verbose mode)} = (0, 0777);
-        }
+        $arg = pop @_;
+        $arg->{verbose} ||= 0;
+        $arg->{mode}      = delete $arg->{mask} if exists $arg->{mask};
+        $arg->{mode}      = 0777 unless exists $arg->{mode};
+        ${$arg->{error}}  = [] if exists $arg->{error};
         $paths = [@_];
     }
     return _mkpath($arg, $paths);
@@ -92,7 +87,6 @@ sub _mkpath {
     my $arg   = shift;
     my $paths = shift;
 
-    local($")=$Is_MacOS ? ":" : "/";
     my(@created,$path);
     foreach $path (@$paths) {
         next unless length($path);
@@ -130,15 +124,13 @@ sub _mkpath {
     return @created;
 }
 
+sub rm_tree {
+    push @_, {} if !@_ or (@_ and !UNIVERSAL::isa($_[-1],'HASH'));
+    goto &rmtree;
+}
+
 sub rmtree {
-    my $old_style = (
-        UNIVERSAL::isa($_[0],'ARRAY')
-        or (@_ == 2 and (defined $_[1] ? $_[1] =~ /\A\d+\z/ : 1))
-        or (@_ == 3
-            and (defined $_[1] ? $_[1] =~ /\A\d*\z/ : 1)
-            and (defined $_[2] ? $_[2] =~ /\A\d+\z/ : 1)
-        )
-    ) ? 1 : 0;
+    my $old_style = !(@_ > 0 and UNIVERSAL::isa($_[-1],'HASH'));
 
     my $arg;
     my $paths;
@@ -172,18 +164,42 @@ sub rmtree {
     $arg->{prefix} = '';
     $arg->{depth}  = 0;
 
+    my @clean_path;
     $arg->{cwd} = getcwd() or do {
         _error($arg, "cannot fetch initial working directory");
         return 0;
     };
     for ($arg->{cwd}) { /\A(.*)\Z/; $_ = $1 } # untaint
 
-    @{$arg}{qw(device inode)} = (stat $arg->{cwd})[0,1] or do {
+    for my $p (@$paths) {
+        # need to fixup case and map \ to / on Windows
+        my $ortho_root = $^O eq 'MSWin32' ? _slash_lc($p)          : $p;
+        my $ortho_cwd  = $^O eq 'MSWin32' ? _slash_lc($arg->{cwd}) : $arg->{cwd};
+        if ($ortho_root eq substr($ortho_cwd, 0, length($ortho_root))) {
+            local $! = 0;
+            _error($arg, "cannot remove path when cwd is $arg->{cwd}", $p);
+            next;
+        }
+
+        if ($Is_MacOS) {
+            $p  = ":$p" unless $p =~ /:/;
+            $p .= ":"   unless $p =~ /:\z/;
+        }
+        elsif ($^O eq 'MSWin32') {
+            $p =~ s{[/\\]\z}{};
+        }
+        else {
+            $p =~ s{/\z}{};
+        }
+        push @clean_path, $p;
+    }
+
+    @{$arg}{qw(device inode perm)} = (lstat $arg->{cwd})[0,1] or do {
         _error($arg, "cannot stat initial working directory", $arg->{cwd});
         return 0;
     };
 
-    return _rmtree($arg, $paths);
+    return _rmtree($arg, \@clean_path);
 }
 
 sub _rmtree {
@@ -197,22 +213,6 @@ sub _rmtree {
     my (@files, $root);
     ROOT_DIR:
     foreach $root (@$paths) {
-        # need to fixup \ to / on Windows
-        my $ortho_root = $^O eq 'MSWin32' ? _slash_lc($root)       : $root;
-        my $ortho_cwd  = $^O eq 'MSWin32' ? _slash_lc($arg->{cwd}) : $arg->{cwd};
-        if ($ortho_root eq substr($ortho_cwd, 0, length($ortho_root))) {
-            $! = 0;
-            _error($arg, "cannot remove path when cwd is $arg->{cwd}", $root);
-            return 0;
-        }
-        if ($Is_MacOS) {
-            $root  = ":$root" unless $root =~ /:/;
-            $root .= ":"      unless $root =~ /:\z/;
-        }
-        else {
-            $root =~ s{/\z}{};
-        }
-
         # since we chdir into each directory, it may not be obvious
         # to figure out where we are if we generate a message about
         # a file name. We therefore construct a semi-canonical
@@ -243,13 +243,13 @@ sub _rmtree {
                 }
             }
 
-            my ($device, $inode, $perm) = (stat $curdir)[0,1,2] or do {
+            my ($cur_dev, $cur_inode, $perm) = (stat $curdir)[0,1,2] or do {
                 _error($arg, "cannot stat current working directory", $canon);
                 next ROOT_DIR;
             };
 
-            ($ldev eq $device and $lino eq $inode)
-                or _croak("directory $canon changed before chdir, expected dev=$ldev ino=$lino, actual dev=$device ino=$inode, aborting.");
+            ($ldev eq $cur_dev and $lino eq $cur_inode)
+                or _croak("directory $canon changed before chdir, expected dev=$ldev ino=$lino, actual dev=$cur_dev ino=$cur_inode, aborting.");
 
             $perm &= 07777; # don't forget setuid, setgid, sticky bits
             my $nperm = $perm | 0700;
@@ -296,7 +296,7 @@ sub _rmtree {
                 # remove the contained files before the directory itself
                 my $narg = {%$arg};
                 @{$narg}{qw(device inode cwd prefix depth)}
-                    = ($device, $inode, $updir, $canon, $arg->{depth}+1);
+                    = ($cur_dev, $cur_inode, $updir, $canon, $arg->{depth}+1);
                 $count += _rmtree($narg, \@files);
             }
 
@@ -313,11 +313,11 @@ sub _rmtree {
 
             # ensure that a chdir upwards didn't take us somewhere other
             # than we expected (see CVE-2002-0435)
-            ($device, $inode) = (stat $curdir)[0,1]
+            ($cur_dev, $cur_inode) = (stat $curdir)[0,1]
                 or _croak("cannot stat prior working directory $arg->{cwd}: $!, aborting.");
 
-            ($arg->{device} eq $device and $arg->{inode} eq $inode)
-                or _croak("previous directory $arg->{cwd} changed before entering $canon, expected dev=$ldev ino=$lino, actual dev=$device ino=$inode, aborting.");
+            ($arg->{device} eq $cur_dev and $arg->{inode} eq $cur_inode)
+                or _croak("previous directory $arg->{cwd} changed before entering $canon, expected dev=$ldev ino=$lino, actual dev=$cur_dev ino=$cur_inode, aborting.");
 
             if ($arg->{depth} or !$arg->{keep_root}) {
                 if ($arg->{safe} &&
@@ -402,55 +402,74 @@ File::Path - Create or remove directory trees
 
 =head1 VERSION
 
-This document describes version 2.06_04 of File::Path, released
+This document describes version 2.06_05 of File::Path, released
 2008-05-13.
 
 =head1 SYNOPSIS
 
     use File::Path;
 
-    # modern
-    mkpath( 'foo/bar/baz', '/zug/zwang', {verbose => 1} );
+  # modern
+  make_path( 'foo/bar/baz', '/zug/zwang' );
+  # or
+  mkpath( 'foo/bar/baz', '/zug/zwang', {verbose => 1} );
 
-    rmtree(
-        'foo/bar/baz', '/zug/zwang',
-        { verbose => 1, error  => \my $err_list }
-    );
+  rmtree(
+    'foo/bar/baz', '/zug/zwang',
+    { verbose => 1, error  => \my $err_list }
+  );
+  # or
+  rm_tree( 'foo/bar/baz', '/zug/zwang' );
 
-    # traditional
-    mkpath(['/foo/bar/baz', 'blurfl/quux'], 1, 0711);
-    rmtree(['foo/bar/baz', 'blurfl/quux'], 1, 1);
+  # traditional
+  mkpath(['/foo/bar/baz', 'blurfl/quux'], 1, 0711);
+  rmtree(['foo/bar/baz', 'blurfl/quux'], 1, 1);
 
 =head1 DESCRIPTION
 
 The C<mkpath> function provides a convenient way to create directories
 of arbitrary depth. Similarly, the C<rmtree> function provides a
 convenient way to delete an entire directory subtree from the
-filesystem, much like the Unix command C<rm -r>.
+filesystem, much like the Unix command C<rm -r> or C<del /s> on
+Windows.
 
-Both functions may be called in one of two ways, the traditional,
-compatible with code written since the dawn of time, and modern,
-that offers a more flexible and readable idiom. New code should use
-the modern interface.
+There are two further functions, C<make_path> and C<remove_tree>
+that perform the same task and offer a more intuitive interface.
 
 =head2 FUNCTIONS
 
 The modern way of calling C<mkpath> and C<rmtree> is with a list
-of directories to create, or remove, respectively, followed by an
-optional hash reference containing keys to control the
-function's behaviour.
+of directories to create, or remove, respectively, followed by a
+hash reference containing keys to control the function's behaviour.
+
+=head3 C<make_path>
+
+The C<make_path> routine accepts a list of directories to be
+created. Its behaviour may be tuned by an optional hashref
+appearing as the last parameter on the call.
+
+  my @created = make_path(qw(/tmp /flub /home/nobody));
+  print "created $_\n" for @created;
+
+The function returns the list of files actually created during the
+call.
 
 =head3 C<mkpath>
 
-The following keys are recognised as parameters to C<mkpath>.
-The function returns the list of files actually created during the
-call.
+The C<mkpath> routine will recognise a final hashref in the
+same way as C<make_path>. If no hashref is present, the
+parameters are interpreted according to the traditional interface.
 
   my @created = mkpath(
     qw(/tmp /flub /home/nobody),
     {verbose => 1, mode => 0750},
   );
   print "created $_\n" for @created;
+
+The function returns the list of files actually created during the
+call.
+
+The following keys are recognised:
 
 =over 4
 
@@ -480,7 +499,19 @@ in an C<eval> block.
 
 =back
 
+=head3 C<rm_tree>
+
+The C<rm_tree> routine accepts a list of directories to be
+removed. Its behaviour may be tuned by an optional hashref
+appearing as the last parameter on the call.
+
+  rmtree( 'this/dir', 'that/dir' );
+
 =head3 C<rmtree>
+
+The C<rmtree> routine will recognise a final hashref in the
+same way as C<rm_tree>. If no hashref is present, the
+parameters are interpreted according to the traditional interface.
 
 =over 4
 
@@ -626,6 +657,9 @@ traditional interface can be determined I<only> by trapping diagnostic
 messages using C<$SIG{__WARN__}>; it is not apparent from the return
 value. (The modern interface may use the C<error> parameter to
 record any problems encountered).
+
+It is not possible to invoke the C<keep_root> functionality in
+the traditional interface.
 
 =head2 ERROR HANDLING
 

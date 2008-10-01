@@ -1,5 +1,10 @@
 Revision history for Perl extension File::Path.
 
+2.06_05
+    - Introduce make_path() and rm_tree() API extension.
+    - Remove problematic test revealed by Matt Kraal on QNX
+      (see http://nntp.perl.org/group/perl.perl5.porters/140187)
+
 2.06_04 2008-05-13 14:28:10 UTC
     - Can't use \S+ if a directory name contains a space (which
       it will may do on Windows (the continuing saga of CPAN #35708)).

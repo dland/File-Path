@@ -7,7 +7,7 @@ use strict;
 use Test::More tests => 6;
 
 BEGIN {
-    use_ok('File::Path');
+    use_ok('File::Path', qw(rmtree mkpath make_path rm_tree));
     use_ok('File::Spec::Functions');
 }
 
@@ -26,7 +26,7 @@ my @dir = (
 );
 
 # create them
-my @created = mkpath(@dir);
+my @created = make_path(@dir);
 is(scalar(@created), 7, "created list of directories");
 
 my $count = rmtree($tmp_base, {error => \(my $err), result => \my $res});

@@ -2,11 +2,11 @@
 
 use strict;
 
-use Test::More tests => 112;
+use Test::More tests => 110;
 
 BEGIN {
     use_ok('Cwd');
-    use_ok('File::Path');
+    use_ok('File::Path', qw(rmtree mkpath make_path rm_tree));
     use_ok('File::Spec::Functions');
 }
 
@@ -46,7 +46,7 @@ my @dir = (
 );
 
 # create them
-my @created = mkpath(@dir);
+my @created = mkpath([@dir]);
 
 is(scalar(@created), 7, "created list of directories");
 
@@ -134,7 +134,7 @@ sub count {
 }
 
 SKIP: {
-    # tests for rmpath() of ancestor directory
+    # tests for rmtree() of ancestor directory
     my $nr_tests = 6;
     my $cwd = getcwd() or skip "failed to getcwd: $!", $nr_tests;
     my $dir  = catdir($cwd, 'remove');
@@ -170,20 +170,6 @@ SKIP: {
     ok(!(-d $dir), "ancestor now removed");
 };
 
-SKIP: {
-    $dir = catdir($tmp_base, 'B');
-    $dir2 = catdir($dir, updir());
-    # IOW: File::Spec->catdir( qw(foo bar), File::Spec->updir ) eq 'foo'
-    # rather than foo/bar/..    
-    skip "updir() canonicalises path on this platform", 2
-        if $dir2 eq $tmp_base
-            or $^O eq 'cygwin';
-        
-    @created = mkpath($dir2, {mask => 0700});
-    is(scalar(@created), 1, "make directory with trailing parent segment");
-    is($created[0], $dir, "made parent");
-};
-
 my $count = rmtree({error => \$error});
 is( $count, 0, 'rmtree of nothing, count of zero' );
 is( scalar(@$error), 0, 'no diagnostic captured' );
@@ -195,7 +181,7 @@ is(scalar(@created), 0, "skipped making existing directories (old style 1)")
 $dir = catdir($tmp_base,'C');
 # mkpath returns unix syntax filespecs on VMS
 $dir = VMS::Filespec::unixify($dir) if $Is_VMS;
-@created = mkpath($tmp_base, $dir);
+@created = make_path($tmp_base, $dir);
 is(scalar(@created), 1, "created directory (new style 1)");
 is($created[0], $dir, "created directory (new style 1) cross-check");
 
@@ -206,7 +192,7 @@ is(scalar(@created), 0, "skipped making existing directories (old style 2)")
 $dir2 = catdir($tmp_base,'D');
 # mkpath returns unix syntax filespecs on VMS
 $dir2 = VMS::Filespec::unixify($dir2) if $Is_VMS;
-@created = mkpath($tmp_base, $dir, $dir2);
+@created = make_path($tmp_base, $dir, $dir2);
 is(scalar(@created), 1, "created directory (new style 2)");
 is($created[0], $dir2, "created directory (new style 2) cross-check");
 
@@ -226,7 +212,7 @@ cmp_ok(scalar(@created), '>=', 1, "made one or more dirs because of ..");
 cmp_ok(scalar(@created), '<=', 2, "made less than two dirs because of ..");
 ok( -d catdir($tmp_base, 'Y'), "directory after parent" );
 
-@created = mkpath(catdir(curdir(), $tmp_base));
+@created = make_path(catdir(curdir(), $tmp_base));
 is(scalar(@created), 0, "nothing created")
     or diag(@created);
 
@@ -286,22 +272,22 @@ else {
 $dir   = catdir('a', 'd1');
 $dir2  = catdir('a', 'd2');
 
-@created = mkpath( $dir, 0, $dir2 );
+@created = make_path( $dir, 0, $dir2 );
 is(scalar @created, 3, 'new-style 3 dirs created');
 
-$count = rmtree( $dir, 0, $dir2, );
+$count = rm_tree( $dir, 0, $dir2, );
 is($count, 3, 'new-style 3 dirs removed');
 
-@created = mkpath( $dir, $dir2, 1 );
+@created = make_path( $dir, $dir2, 1 );
 is(scalar @created, 3, 'new-style 3 dirs created (redux)');
 
-$count = rmtree( $dir, $dir2, 1 );
+$count = rm_tree( $dir, $dir2, 1 );
 is($count, 3, 'new-style 3 dirs removed (redux)');
 
-@created = mkpath( $dir, $dir2 );
+@created = make_path( $dir, $dir2 );
 is(scalar @created, 2, 'new-style 2 dirs created');
 
-$count = rmtree( $dir, $dir2 );
+$count = rm_tree( $dir, $dir2 );
 is($count, 2, 'new-style 2 dirs removed');
 
 if (chdir updir()) {
@@ -446,8 +432,8 @@ cannot restore permissions to \d+ for [^:]+: .* at \1 line \2},
         "rmtree of empty dir carps sensibly"
     );
 
-    stderr_is( sub { mkpath() }, '', "mkpath no args does not carp" );
-    stderr_is( sub { rmtree() }, '', "rmtree no args does not carp" );
+    stderr_is( sub { make_path() }, '', "make_path no args does not carp" );
+    stderr_is( sub { rm_tree() }, '', "rm_tree no args does not carp" );
 
     stdout_is(
         sub {@created = mkpath($dir, 1)},
