@@ -6,7 +6,7 @@ use Test::More tests => 110;
 
 BEGIN {
     use_ok('Cwd');
-    use_ok('File::Path', qw(rmtree mkpath make_path rm_tree));
+    use_ok('File::Path', qw(rmtree mkpath make_path remove_tree));
     use_ok('File::Spec::Functions');
 }
 
@@ -275,19 +275,19 @@ $dir2  = catdir('a', 'd2');
 @created = make_path( $dir, 0, $dir2 );
 is(scalar @created, 3, 'new-style 3 dirs created');
 
-$count = rm_tree( $dir, 0, $dir2, );
+$count = remove_tree( $dir, 0, $dir2, );
 is($count, 3, 'new-style 3 dirs removed');
 
 @created = make_path( $dir, $dir2, 1 );
 is(scalar @created, 3, 'new-style 3 dirs created (redux)');
 
-$count = rm_tree( $dir, $dir2, 1 );
+$count = remove_tree( $dir, $dir2, 1 );
 is($count, 3, 'new-style 3 dirs removed (redux)');
 
 @created = make_path( $dir, $dir2 );
 is(scalar @created, 2, 'new-style 2 dirs created');
 
-$count = rm_tree( $dir, $dir2 );
+$count = remove_tree( $dir, $dir2 );
 is($count, 2, 'new-style 2 dirs removed');
 
 if (chdir updir()) {
@@ -433,7 +433,7 @@ cannot restore permissions to \d+ for [^:]+: .* at \1 line \2},
     );
 
     stderr_is( sub { make_path() }, '', "make_path no args does not carp" );
-    stderr_is( sub { rm_tree() }, '', "rm_tree no args does not carp" );
+    stderr_is( sub { remove_tree() }, '', "remove_tree no args does not carp" );
 
     stdout_is(
         sub {@created = mkpath($dir, 1)},

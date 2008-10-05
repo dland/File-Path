@@ -1,6 +1,9 @@
 Revision history for Perl extension File::Path.
 
-2.06_05
+2.06_06 2008-10-05 21:55:34 UTC
+    - Documentation improvements, no code changes.
+
+2.06_05 2008-10-02 20:30:17 UTC
     - Introduce make_path() and rm_tree() API extension.
     - Remove problematic test revealed by Matt Kraal on QNX
       (see http://nntp.perl.org/group/perl.perl5.porters/140187)

@@ -7,7 +7,7 @@ use strict;
 use Test::More tests => 6;
 
 BEGIN {
-    use_ok('File::Path', qw(rmtree mkpath make_path rm_tree));
+    use_ok('File::Path', qw(rmtree mkpath make_path remove_tree));
     use_ok('File::Spec::Functions');
 }
 

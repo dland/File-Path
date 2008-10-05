@@ -17,10 +17,10 @@ BEGIN {
 
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
-$VERSION   = '2.06_05';
+$VERSION   = '2.06_06';
 @ISA       = qw(Exporter);
 @EXPORT    = qw(mkpath rmtree);
-@EXPORT_OK = qw(make_path rm_tree);
+@EXPORT_OK = qw(make_path remove_tree);
 
 my $Is_VMS     = $^O eq 'VMS';
 my $Is_MacOS   = $^O eq 'MacOS';
@@ -124,7 +124,7 @@ sub _mkpath {
     return @created;
 }
 
-sub rm_tree {
+sub remove_tree {
     push @_, {} if !@_ or (@_ and !UNIVERSAL::isa($_[-1],'HASH'));
     goto &rmtree;
 }
@@ -402,8 +402,8 @@ File::Path - Create or remove directory trees
 
 =head1 VERSION
 
-This document describes version 2.06_05 of File::Path, released
-2008-05-13.
+This document describes version 2.06_06 of File::Path, released
+2008-10-05.
 
 =head1 SYNOPSIS
 
@@ -419,7 +419,7 @@ This document describes version 2.06_05 of File::Path, released
     { verbose => 1, error  => \my $err_list }
   );
   # or
-  rm_tree( 'foo/bar/baz', '/zug/zwang' );
+  remove_tree( 'foo/bar/baz', '/zug/zwang' );
 
   # traditional
   mkpath(['/foo/bar/baz', 'blurfl/quux'], 1, 0711);
@@ -457,8 +457,9 @@ call.
 =head3 C<mkpath>
 
 The C<mkpath> routine will recognise a final hashref in the
-same way as C<make_path>. If no hashref is present, the
-parameters are interpreted according to the traditional interface.
+same manner as C<make_path>. If no hashref is present, the
+parameters are interpreted according to the traditional interface
+(see below).
 
   my @created = mkpath(
     qw(/tmp /flub /home/nobody),
@@ -466,8 +467,8 @@ parameters are interpreted according to the traditional interface.
   );
   print "created $_\n" for @created;
 
-The function returns the list of files actually created during the
-call.
+The function returns the list of directories actually created during
+the call.
 
 The following keys are recognised:
 
@@ -499,19 +500,23 @@ in an C<eval> block.
 
 =back
 
-=head3 C<rm_tree>
+=head3 C<remove_tree>
 
-The C<rm_tree> routine accepts a list of directories to be
+The C<remove_tree> routine accepts a list of directories to be
 removed. Its behaviour may be tuned by an optional hashref
 appearing as the last parameter on the call.
 
-  rmtree( 'this/dir', 'that/dir' );
+  remove_tree( 'this/dir', 'that/dir' );
 
 =head3 C<rmtree>
 
 The C<rmtree> routine will recognise a final hashref in the
-same way as C<rm_tree>. If no hashref is present, the
+same manner as C<remove_tree>. If no hashref is present, the
 parameters are interpreted according to the traditional interface.
+
+  rmtree( 'mydir', 1 );                 # traditional
+  rmtree( ['mydir'], 1 );               # traditional
+  rmtree( 'mydir', 1, {verbose => 0} ); # modern
 
 =over 4
 
@@ -535,7 +540,7 @@ When set to a true value, will cause all files and subdirectories
 to be removed, except the initially specified directories. This comes
 in handy when cleaning out an application's scratch directory.
 
-  rmtree( '/tmp', {keep_root => 1} );
+  remove_tree( '/tmp', {keep_root => 1} );
 
 =item result
 
@@ -544,7 +549,7 @@ be used to store the list of all files and directories unlinked
 during the call. If nothing is unlinked, a reference to an empty
 list is returned (rather than C<undef>).
 
-  rmtree( '/tmp', {result => \my $list} );
+  remove_tree( '/tmp', {result => \my $list} );
   print "unlinked $_\n" for @$list;
 
 This is a useful alternative to the C<verbose> key.
@@ -571,6 +576,11 @@ of hand. This is the safest course of action.
 The old interfaces of C<mkpath> and C<rmtree> take a reference to
 a list of directories (to create or remove), followed by a series
 of positional, numeric, modal parameters that control their behaviour.
+If only one directory is being created or removed, a simple scalar
+may be used instead of the reference.
+
+  rmtree( ['dir1', 'dir2'], 0, 1 );
+  rmtree( 'dir3', 1, 1 );
 
 This design made it difficult to add additional functionality, as
 well as posed the problem of what to do when the calling code only
@@ -608,13 +618,13 @@ the numeric mode to use when creating the directories (defaults to
 
 =back
 
-It returns a list of all directories (including intermediates, determined
-using the Unix '/' separator) created. In scalar context it returns
-the number of directories created.
+It returns a list of all directories (including intermediates,
+determined using the Unix '/' separator) created. In scalar context
+it returns the number of directories created.
 
 If a system error prevents a directory from being created, then the
-C<mkpath> function throws a fatal error with C<Carp::croak>. This error
-can be trapped with an C<eval> block:
+C<mkpath> function throws a fatal error with C<Carp::croak>. This
+error can be trapped with an C<eval> block:
 
   eval { mkpath($dir) };
   if ($@) {
@@ -649,8 +659,8 @@ other than VMS is settled.  (defaults to FALSE)
 
 =back
 
-It returns the number of files, directories and symlinks successfully
-deleted. Symlinks are simply deleted and not followed.
+C<rmtree> returns the number of files, directories and symlinks
+successfully deleted. Symlinks are simply deleted and not followed.
 
 Note also that the occurrence of errors in C<rmtree> using the
 traditional interface can be determined I<only> by trapping diagnostic
@@ -658,7 +668,7 @@ messages using C<$SIG{__WARN__}>; it is not apparent from the return
 value. (The modern interface may use the C<error> parameter to
 record any problems encountered).
 
-It is not possible to invoke the C<keep_root> functionality in
+It is not possible to invoke the C<keep_root> functionality through
 the traditional interface.
 
 =head2 ERROR HANDLING
@@ -674,7 +684,7 @@ references. For each hash reference, the key is the name of the
 file, and the value is the error message (usually the contents of
 C<$!>). An example usage looks like:
 
-  rmtree( 'foo/bar', 'bar/rat', {error => \my $err} );
+  remove_tree( 'foo/bar', 'bar/rat', {error => \my $err} );
   for my $diag (@$err) {
     my ($file, $message) = each %$diag;
     print "problem unlinking $file: $message\n";
@@ -686,7 +696,7 @@ is encountered (for instance, C<rmtree> attempts to remove a directory
 tree that does not exist), the diagnostic key will be empty, only
 the value will be set:
 
-  rmtree( '/no/such/path', {error => \my $err} );
+  remove_tree( '/no/such/path', {error => \my $err} );
   for my $diag (@$err) {
     my ($file, $message) = each %$diag;
     if ($file eq '') {
@@ -703,38 +713,18 @@ invited to specify what it is you are expecting to use:
 
   use File::Path 'rmtree';
 
-=head3 HEURISTICS
+The routines C<make_path> and C<remove_tree> are B<not> exported
+by default. You must specify which ones you want to use.
 
-The functions detect (as far as possible) which way they are being
-called and will act appropriately. It is important to remember that
-the heuristic for detecting the old style is either the presence
-of an array reference, or two or three parameters total and second
-and third parameters are numeric. Hence...
+  use File::Path 'remove_tree';
 
-    mkpath 486, 487, 488;
+Note that a side-effect of the above is that C<mkpath> and C<rmtree>
+are no longer exported at all. This is due to the way the C<Exporter>
+module works. If you are migrating a codebase to use the new
+interface, you will have to list everything explicitly. But that's
+just good practice anyway.
 
-... will not assume the modern style and create three directories, rather
-it will create one directory verbosely, setting the permission to
-0750 (488 being the decimal equivalent of octal 750). Here, old
-style trumps new. It must, for backwards compatibility reasons.
-
-If you want to ensure there is absolutely no ambiguity about which
-way the function will behave, make sure the first parameter is a
-reference to a one-element list, to force the old style interpretation:
-
-    mkpath [486], 487, 488;
-
-and get only one directory created. Or add a reference to an empty
-parameter hash, to force the new style:
-
-    mkpath 486, 487, 488, {};
-
-... and hence create the three directories. If the empty hash
-reference seems a little strange to your eyes, or you suspect a
-subsequent programmer might I<helpfully> optimise it away, you
-can add a parameter set to a default value:
-
-    mkpath 486, 487, 488, {verbose => 0};
+  use File::Path qw(remove_tree rmtree);
 
 =head3 SECURITY CONSIDERATIONS
 
