@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 110;
+use Test::More tests => 114;
 
 BEGIN {
     use_ok('Cwd');
@@ -295,6 +295,42 @@ if (chdir updir()) {
 }
 else {
     fail("chdir parent: $!");
+}
+
+SKIP: {
+    # test bug http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=487319
+    skip "Don't need Force_Writeable semantics on $^O", 4
+        if grep {$^O eq $_} qw(amigaos dos epoc MSWin32 MacOS os2);
+    $dir  = 'bug487319';
+    $dir2 = 'bug487319-symlink';
+    @created = make_path($dir, {mask => 0700});
+    is(scalar @created, 1, 'bug 487319 setup');
+    symlink($dir, $dir2);
+    ok(-e $dir2, "debian bug 487319 setup symlink") or diag($dir2);
+
+    chmod 0500, $dir;
+    my $mask_initial = (stat $dir)[2];
+    remove_tree($dir2);
+
+    my $mask = (stat $dir)[2];
+    is( $mask, $mask_initial, 'mask of symlink target dir unchanged (debian bug 487319)');
+
+    # now try a file
+    my $file = catfile($dir, 'file');
+    open my $out, '>', $file;
+    close $out;
+
+    chmod 0500, $file;
+    $mask_initial = (stat $file)[2];
+
+    my $file2 = catfile($dir, 'symlink');
+    symlink($file, $file2);
+    remove_tree($file2);
+
+    $mask = (stat $file)[2];
+    is( $mask, $mask_initial, 'mask of symlink target file unchanged (debian bug 487319)');
+
+    remove_tree($dir);
 }
 
 # see what happens if a file exists where we want a directory

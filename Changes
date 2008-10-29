@@ -1,5 +1,12 @@
 Revision history for Perl extension File::Path.
 
+2.06_07 2008-10-29 14:20:16 UTC
+    - Silence 'uninitialized warning' reported in #36615.
+    - Fix $Force_Writeable issue reported in #36982 (see also
+      http://bugs.debian.org/487319).
+    - Code style improvements and documentation improvements
+      from Gisle Aas.
+
 2.06_06 2008-10-05 21:55:34 UTC
     - Documentation improvements, no code changes.
 
