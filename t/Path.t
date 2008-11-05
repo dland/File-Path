@@ -3,6 +3,7 @@
 use strict;
 
 use Test::More tests => 114;
+use Config;
 
 BEGIN {
     use_ok('Cwd');
@@ -97,6 +98,8 @@ sub count {
 {
     mkdir 'solo', 0755;
     chdir 'solo';
+    open my $f, '>', 'foo.dat';
+    close $f;
     my $before = count(curdir());
     cmp_ok($before, '>', 0, "baseline $before");
 
@@ -114,6 +117,8 @@ sub count {
 {
     mkdir 'solo', 0755;
     chdir 'solo';
+    open my $f, '>', 'foo.dat';
+    close $f;
     my $before = count(curdir());
     cmp_ok($before, '>', 0, "ARGV $before");
     {
@@ -301,6 +306,7 @@ SKIP: {
     # test bug http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=487319
     skip "Don't need Force_Writeable semantics on $^O", 4
         if grep {$^O eq $_} qw(amigaos dos epoc MSWin32 MacOS os2);
+    skip "Symlinks not available", 4 unless $Config{'d_symlink'};
     $dir  = 'bug487319';
     $dir2 = 'bug487319-symlink';
     @created = make_path($dir, {mask => 0700});
@@ -358,6 +364,7 @@ my $extra =  catdir(curdir(), qw(EXTRA 1 a));
 SKIP: {
     skip "extra scenarios not set up, see eg/setup-extra-tests", 14
         unless -e $extra;
+    skip "Symlinks not available", 14 unless $Config{'d_symlink'};
 
     my ($list, $err);
     $dir = catdir( 'EXTRA', '1' );
