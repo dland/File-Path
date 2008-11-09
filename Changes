@@ -1,5 +1,9 @@
 Revision history for Perl extension File::Path.
 
+2.07 2008-11-09 13:05:50 UTC
+    - Another VMS test tweak from Craig and additional
+      improvements from Gisle.
+
 2.06_08 2008-11-05 00:11:17 UTC
     - More documentation tweaks from Gisle Aas.
     - VMS tweaks courtesy of Craig A. Berry (cpan #40512).
