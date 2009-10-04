@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 114;
+use Test::More tests => 129;
 use Config;
 
 BEGIN {
@@ -205,7 +205,8 @@ $count = rmtree($dir, 0);
 is($count, 1, "removed directory unsafe mode");
 
 $count = rmtree($dir2, 0, 1);
-is($count, 1, "removed directory safe mode");
+my $removed = $Is_VMS ? 0 : 1;
+is($count, $removed, "removed directory safe mode");
 
 # mkdir foo ./E/../Y
 # Y should exist
@@ -302,10 +303,27 @@ else {
 }
 
 SKIP: {
+    skip "This is not a MSWin32 platform", 1
+        unless $^O eq 'MSWin32';
+
+    my $UNC_path_taint = $ENV{PERL_FILE_PATH_UNC_TESTDIR};
+    skip "PERL_FILE_PATH_UNC_TESTDIR environment variable not set", 1
+        unless defined($UNC_path_taint);
+
+    my ($UNC_path) = ($UNC_path_taint =~ m{^([/\\]{2}\w+[/\\]\w+[/\\]\w+)$});
+    
+    skip "PERL_FILE_PATH_UNC_TESTDIR environment variable does not point to a directory", 1
+        unless -d $UNC_path;
+    
+    my $removed = rmtree($UNC_path);
+    cmp_ok($removed, '>', 0, "removed $removed entries from $UNC_path");
+}
+
+SKIP: {
     # test bug http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=487319
     skip "Don't need Force_Writeable semantics on $^O", 4
         if grep {$^O eq $_} qw(amigaos dos epoc MSWin32 MacOS os2);
-    skip "Symlinks not available", 4 unless $Config{'d_symlink'};
+    skip "Symlinks not available", 4 unless $Config{d_symlink};
     $dir  = 'bug487319';
     $dir2 = 'bug487319-symlink';
     @created = make_path($dir, {mask => 0700});
@@ -363,7 +381,7 @@ my $extra =  catdir(curdir(), qw(EXTRA 1 a));
 SKIP: {
     skip "extra scenarios not set up, see eg/setup-extra-tests", 14
         unless -e $extra;
-    skip "Symlinks not available", 14 unless $Config{'d_symlink'};
+    skip "Symlinks not available", 14 unless $Config{d_symlink};
 
     my ($list, $err);
     $dir = catdir( 'EXTRA', '1' );
@@ -416,6 +434,78 @@ SKIP: {
 }
 
 SKIP: {
+    my $skip_count = 8; # DRY
+    skip "getpwent() not implemented on $^O", $skip_count
+        unless $Config{d_getpwent};
+    skip "getgrent() not implemented on $^O", $skip_count
+        unless $Config{d_getgrent};
+    skip 'not running as root', $skip_count
+        unless $< == 0;
+
+    my $dir_stem = $dir = catdir($tmp_base, 'owned-by');
+
+    # find the highest uid ('nobody' or similar)
+    my $max_uid   = 0;
+    my $max_user = undef;
+    while (my @u = getpwent()) {
+        if ($max_uid < $u[2]) {
+            $max_uid  = $u[2];
+            $max_user = $u[0];
+        }
+    }
+    skip 'getpwent() appears to be insane', $skip_count
+        unless $max_uid > 0;
+
+    # find the highest gid ('nogroup' or similar)
+    my $max_gid   = 0;
+    my $max_group = undef;
+    while (my @g = getgrent()) {
+        if ($max_gid < $g[2]) {
+            $max_gid = $g[2];
+            $max_group = $g[0];
+        }
+    }
+    skip 'getgrent() appears to be insane', $skip_count
+        unless $max_gid > 0;
+
+    $dir = catdir($dir_stem, 'aaa');
+    @created = make_path($dir, {owner => $max_user});
+    is(scalar(@created), 2, "created a directory owned by $max_user...");
+    my $dir_uid = (stat $created[0])[4];
+    is($dir_uid, $max_uid, "... owned by $max_uid");
+
+    $dir = catdir($dir_stem, 'aab');
+    @created = make_path($dir, {group => $max_group});
+    is(scalar(@created), 1, "created a directory owned by group $max_group...");
+    my $dir_gid = (stat $created[0])[5];
+    is($dir_gid, $max_gid, "... owned by group $max_gid");
+
+    $dir = catdir($dir_stem, 'aac');
+    @created = make_path($dir, {user => $max_user, group => $max_group});
+    is(scalar(@created), 1, "created a directory owned by $max_user:$max_group...");
+    ($dir_uid, $dir_gid) = (stat $created[0])[4,5];
+    is($dir_uid, $max_uid, "... owned by $max_uid");
+    is($dir_gid, $max_gid, "... owned by group $max_gid");
+
+    SKIP: {
+        skip 'Test::Output not available', 1
+               unless $has_Test_Output;
+
+        # invent a user and group that don't exist
+        do { ++$max_user  } while (getpwnam($max_user));
+        do { ++$max_group } while (getgrnam($max_group));
+
+        $dir = catdir($dir_stem, 'aad');
+        stderr_like(
+            sub {make_path($dir, {user => $max_user, group => $max_group})},
+            qr{\Aunable to map $max_user to a uid, ownership not changed: .* at \S+ line \d+
+unable to map $max_group to a gid, group ownership not changed: .* at \S+ line \d+\b},
+            "created a directory not owned by $max_user:$max_group..."
+        );
+    }
+}
+
+SKIP: {
     skip 'Test::Output not available', 14
         unless $has_Test_Output;
 
@@ -452,8 +542,7 @@ cannot remove directory for [^:]+: .* at \1 line \2
 cannot unlink file for [^:]+: .* at \1 line \2
 cannot restore permissions to \d+ for [^:]+: .* at \1 line \2
 cannot make child directory read-write-exec for [^:]+: .* at \1 line \2
-cannot remove directory for [^:]+: .* at \1 line \2
-cannot restore permissions to \d+ for [^:]+: .* at \1 line \2},
+cannot remove directory for [^:]+: .* at \1 line \2},
             'rmtree with insufficient privileges'
         );
     }
@@ -528,7 +617,7 @@ SKIP: {
         unless -d catdir(qw(EXTRA 1));
 
     rmtree 'EXTRA', {safe => 0, error => \$error};
-    is( scalar(@$error), 11, 'seven deadly sins' ); # well there used to be 7
+    is( scalar(@$error), 10, 'seven deadly sins' ); # well there used to be 7
 
     rmtree 'EXTRA', {safe => 1, error => \$error};
     is( scalar(@$error), 9, 'safe is better' );
@@ -545,6 +634,27 @@ SKIP: {
     }
 }
 
-rmtree($tmp_base, {result => \$list} );
-is(ref($list), 'ARRAY', "received a final list of results");
-ok( !(-d $tmp_base), "test base directory gone" );
+SKIP: {
+    my $nr_tests = 6;
+    my $cwd = getcwd() or skip "failed to getcwd: $!", $nr_tests;
+    rmtree($tmp_base, {result => \$list} );
+    is(ref($list), 'ARRAY', "received a final list of results");
+    ok( !(-d $tmp_base), "test base directory gone" );
+    
+    my $p = getcwd();
+    my $x = "x$$";
+    my $xx = $x . "x";
+    
+    # setup
+    ok(mkpath($xx), "make $xx");
+    ok(chdir($xx), "... and chdir $xx");
+    END {
+         ok(chdir($p), "... now chdir $p");
+         ok(rmtree($xx), "... and finally rmtree $xx");
+    }
+    
+    # create and delete directory
+    my $px = catdir($p, $x);
+    ok(mkpath($px), 'create and delete directory 2.07');
+    ok(rmtree($px), '.. rmtree fails in File-Path-2.07');
+}

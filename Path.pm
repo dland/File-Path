@@ -17,7 +17,7 @@ BEGIN {
 
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
-$VERSION   = '2.07';
+$VERSION   = '2.08';
 @ISA       = qw(Exporter);
 @EXPORT    = qw(mkpath rmtree);
 @EXPORT_OK = qw(make_path remove_tree);
@@ -28,6 +28,10 @@ my $Is_MacOS   = $^O eq 'MacOS';
 # These OSes complain if you want to remove a file that you have no
 # write permission to:
 my $Force_Writeable = grep {$^O eq $_} qw(amigaos dos epoc MSWin32 MacOS os2);
+
+# Unix-like systems need to stat each directory in order to detect
+# race condition. MS-Windows is immune to this particular attack.
+my $Need_Stat_Check = !($^O eq 'MSWin32');
 
 sub _carp {
     require Carp;
@@ -77,6 +81,34 @@ sub mkpath {
         $arg->{mode}      = delete $arg->{mask} if exists $arg->{mask};
         $arg->{mode}      = 0777 unless exists $arg->{mode};
         ${$arg->{error}}  = [] if exists $arg->{error};
+        $arg->{owner}     = delete $arg->{user} if exists $arg->{user};
+        $arg->{owner}     = delete $arg->{uid}  if exists $arg->{uid};
+        if (exists $arg->{owner} and $arg->{owner} =~ /\D/) {
+            my $uid = (getpwnam $arg->{owner})[2];
+            if (defined $uid) {
+                $arg->{owner} = $uid;
+            }
+            else {
+                _error($arg, "unable to map $arg->{owner} to a uid, ownership not changed");
+                delete $arg->{owner};
+            }
+        }
+        if (exists $arg->{group} and $arg->{group} =~ /\D/) {
+            my $gid = (getgrnam $arg->{group})[2];
+            if (defined $gid) {
+                $arg->{group} = $gid;
+            }
+            else {
+                _error($arg, "unable to map $arg->{group} to a gid, group ownership not changed");
+                delete $arg->{group};
+            }
+        }
+        if (exists $arg->{owner} and not exists $arg->{group}) {
+            $arg->{group} = -1; # chown will leave group unchanged
+        }
+        if (exists $arg->{group} and not exists $arg->{owner}) {
+            $arg->{owner} = -1; # chown will leave owner unchanged
+        }
         $paths = [@_];
     }
     return _mkpath($arg, $paths);
@@ -103,6 +135,12 @@ sub _mkpath {
         print "mkdir $path\n" if $arg->{verbose};
         if (mkdir($path,$arg->{mode})) {
             push(@created, $path);
+            if (exists $arg->{owner}) {
+				# NB: $arg->{group} guaranteed to be set during initialisation
+                if (!chown $arg->{owner}, $arg->{group}, $path) {
+                    _error($arg, "Cannot change ownership of $path to $arg->{owner}:$arg->{group}");
+                }
+            }
         }
         else {
             my $save_bang = $!;
@@ -126,6 +164,24 @@ sub _mkpath {
 sub remove_tree {
     push @_, {} unless @_ and UNIVERSAL::isa($_[-1],'HASH');
     goto &rmtree;
+}
+
+sub _is_subdir {
+    my($dir, $test) = @_;
+
+    my($dv, $dd) = File::Spec->splitpath($dir, 1);
+    my($tv, $td) = File::Spec->splitpath($test, 1);
+
+    # not on same volume
+    return 0 if $dv ne $tv;
+
+    my @d = File::Spec->splitdir($dd);
+    my @t = File::Spec->splitdir($td);
+
+    # @t can't be a subdir if it's shorter than @d
+    return 0 if @t < @d;
+
+    return join('/', @d) eq join('/', splice @t, 0, +@d);
 }
 
 sub rmtree {
@@ -171,9 +227,7 @@ sub rmtree {
         my $ortho_cwd  = $^O eq 'MSWin32' ? _slash_lc($arg->{cwd}) : $arg->{cwd};
         my $ortho_root_length = length($ortho_root);
         $ortho_root_length-- if $^O eq 'VMS'; # don't compare '.' with ']'
-        if ($ortho_root_length
-            && (substr($ortho_root, 0, $ortho_root_length) 
-             eq substr($ortho_cwd, 0, $ortho_root_length))) {
+        if ($ortho_root_length && _is_subdir($ortho_root, $ortho_cwd)) {
             local $! = 0;
             _error($arg, "cannot remove path when cwd is $arg->{cwd}", $p);
             next;
@@ -226,6 +280,7 @@ sub _rmtree {
 
         if ( -d _ ) {
             $root = VMS::Filespec::pathify($root) if $Is_VMS;
+
             if (!chdir($root)) {
                 # see if we can escalate privileges to get in
                 # (e.g. funny protection mask such as -w- instead of rwx)
@@ -246,8 +301,10 @@ sub _rmtree {
                 next ROOT_DIR;
             };
 
-            ($ldev eq $cur_dev and $lino eq $cur_inode)
-                or _croak("directory $canon changed before chdir, expected dev=$ldev ino=$lino, actual dev=$cur_dev ino=$cur_inode, aborting.");
+            if ($Need_Stat_Check) {
+                ($ldev eq $cur_dev and $lino eq $cur_inode)
+                    or _croak("directory $canon changed before chdir, expected dev=$ldev ino=$lino, actual dev=$cur_dev ino=$cur_inode, aborting.");
+            }
 
             $perm &= 07777; # don't forget setuid, setgid, sticky bits
             my $nperm = $perm | 0700;
@@ -288,6 +345,7 @@ sub _rmtree {
                 @files = map {$_ eq '.' ? '.;' : $_} reverse @files;
                 ($root = VMS::Filespec::unixify($root)) =~ s/\.dir\z//;
             }
+
             @files = grep {$_ ne $updir and $_ ne $curdir} @files;
 
             if (@files) {
@@ -314,8 +372,10 @@ sub _rmtree {
             ($cur_dev, $cur_inode) = (stat $curdir)[0,1]
                 or _croak("cannot stat prior working directory $arg->{cwd}: $!, aborting.");
 
-            ($arg->{device} eq $cur_dev and $arg->{inode} eq $cur_inode)
-                or _croak("previous directory $arg->{cwd} changed before entering $canon, expected dev=$ldev ino=$lino, actual dev=$cur_dev ino=$cur_inode, aborting.");
+            if ($Need_Stat_Check) {
+                ($arg->{device} eq $cur_dev and $arg->{inode} eq $cur_inode)
+                    or _croak("previous directory $arg->{cwd} changed before entering $canon, expected dev=$ldev ino=$lino, actual dev=$cur_dev ino=$cur_inode, aborting.");
+            }
 
             if ($arg->{depth} or !$arg->{keep_root}) {
                 if ($arg->{safe} &&
@@ -333,7 +393,7 @@ sub _rmtree {
                 }
                 else {
                     _error($arg, "cannot remove directory", $canon);
-                    if (!chmod($perm, ($Is_VMS ? VMS::Filespec::fileify($root) : $root))
+                    if ($Force_Writeable && !chmod($perm, ($Is_VMS ? VMS::Filespec::fileify($root) : $root))
                     ) {
                         _error($arg, sprintf("cannot restore permissions to 0%o",$perm), $canon);
                     }
@@ -396,8 +456,8 @@ File::Path - Create or remove directory trees
 
 =head1 VERSION
 
-This document describes version 2.07 of File::Path, released
-2008-11-09.
+This document describes version 2.08 of File::Path, released
+2009-10-04.
 
 =head1 SYNOPSIS
 
@@ -478,6 +538,34 @@ HANDLING"> section for more information.
 If this parameter is not used, certain error conditions may raise
 a fatal error that will cause the program will halt, unless trapped
 in an C<eval> block.
+
+=item owner => $owner
+
+=item user => $owner
+
+=item uid => $owner
+
+If present, will cause any created directory to be owned by C<$owner>.
+If the value is numeric, it will be interpreted as a uid, otherwise
+as username is assumed. An error will be issued if the username cannot be
+mapped to a uid, or the uid does not exist, or the process lacks the
+privileges to change ownership.
+
+Ownwership of directories that already exist will not be changed.
+
+C<user> and C<uid> are aliases of C<owner>.
+
+=item group => $group
+
+If present, will cause any created directory to be owned by the group C<$group>.
+If the value is numeric, it will be interpreted as a gid, otherwise
+as group name is assumed. An error will be issued if the group name cannot be
+mapped to a gid, or the gid does not exist, or the process lacks the
+privileges to change group ownership.
+
+Group ownwership of directories that already exist will not be changed.
+
+    make_path '/var/tmp/webcache', {owner=>'nobody', group=>'nogroup'};
 
 =back
 
@@ -646,6 +734,17 @@ just good practice anyway.
 
   use File::Path qw(remove_tree rmtree);
 
+=head3 API CHANGES
+
+The API was changed in the 2.0 branch. For a time, C<mkpath> and
+C<rmtree> tried, unsuccessfully, to deal with the two different
+calling mechanisms. This approach was considered a failure.
+
+The new semantics are now only available with C<make_path> and
+C<remove_tree>. The old semantics are only available through
+C<mkpath> and C<rmtree>. Users are strongly encouraged to upgrade
+to at least 2.08 in order to avoid surprises.
+
 =head3 SECURITY CONSIDERATIONS
 
 There were race conditions 1.x implementations of File::Path's
@@ -809,6 +908,20 @@ After having failed to remove a file, C<remove_tree> was also unable
 to restore the permissions on the file to a possibly less permissive
 setting. (Permissions given in octal).
 
+=item unable to map [owner] to a uid, ownership not changed");
+
+C<make_path> was instructed to give the ownership of created
+directories to the symbolic name [owner], but C<getpwnam> did
+not return the corresponding numeric uid. The directory will
+be created, but ownership will not be changed.
+
+=item unable to map [group] to a gid, group ownership not changed
+
+C<make_path> was instructed to give the group ownership of created
+directories to the symbolic name [group], but C<getgrnam> did
+not return the corresponding numeric gid. The directory will
+be created, but group ownership will not be changed.
+
 =back
 
 =head1 SEE ALSO
@@ -859,7 +972,7 @@ Tim Bunce and Charles Bailey. Currently maintained by David Landgren
 =head1 COPYRIGHT
 
 This module is copyright (C) Charles Bailey, Tim Bunce and
-David Landgren 1995-2008. All rights reserved.
+David Landgren 1995-2009. All rights reserved.
 
 =head1 LICENSE
 

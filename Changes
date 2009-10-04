@@ -1,5 +1,16 @@
 Revision history for Perl extension File::Path.
 
+2.08 2009-10-04 10:14:36 UTC
+    - make_path() can now set user- and group-ownership
+      on created directories. (Suggested by Jens Rehsack,
+      CPAN #47558).
+
+2.07_03 2009-06-21 13:11:30 UTC
+    - Merged 2.07_02 patches from blead
+    - Remove stat checks on Windows platform (inhibits 
+      UNC path removals from working, and Windows is
+      immune to this particular attack). CPAN #34701
+
 2.07 2008-11-09 13:05:50 UTC
     - Another VMS test tweak from Craig and additional
       improvements from Gisle.
