@@ -1,5 +1,9 @@
 Revision history for Perl extension File::Path.
 
+2.09 2013-01-13 21:09:12 UTC
+    - merge two bugfixes from blead
+      see https://github.com/dland/File-Path/pull/1
+
 2.08 2009-10-04 10:14:36 UTC
     - make_path() can now set user- and group-ownership
       on created directories. (Suggested by Jens Rehsack,

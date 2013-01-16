@@ -1,4 +1,4 @@
-This file is the README for File::Path version 2.08
+This file is the README for File::Path version 2.09
 
 INSTALLATION
 
@@ -45,6 +45,10 @@ Please report all bugs on the RT queue:
 
 L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Path>
 
+You can also send pull requests to the Github repository:
+
+L<https://github.com/dland/File-Path>
+
 AUTHORS
 
 Tim Bunce and Charles Bailey.
@@ -54,7 +58,7 @@ Currently maintained by David Landgren <david@landgren.net>.
 COPYRIGHT
 
 This module is copyright (C) Charles Bailey, Tim Bunce and
-David Landgren 1995-2008.  All rights reserved.
+David Landgren 1995-2013.  All rights reserved.
 
 LICENSE
 
