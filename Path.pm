@@ -562,7 +562,7 @@ as group name is assumed. An error will be issued if the group name cannot be
 mapped to a gid, or the gid does not exist, or the process lacks the
 privileges to change group ownership.
 
-Group ownwership of directories that already exist will not be changed.
+Group ownership of directories that already exist will not be changed.
 
     make_path '/var/tmp/webcache', {owner=>'nobody', group=>'nogroup'};
 
@@ -709,7 +709,7 @@ An example usage looks like:
 
 Note that if no errors are encountered, C<$err> will reference an
 empty array.  This means that C<$err> will always end up TRUE; so you
-need to test C<@$err> to determine if errors occured.
+need to test C<@$err> to determine if errors occurred.
 
 =head2 NOTES
 
