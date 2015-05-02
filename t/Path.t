@@ -298,11 +298,20 @@ is($count, 2, 'new-style 2 dirs removed');
 $dir = catdir("a\nb", 'd1');
 $dir2 = catdir("a\nb", 'd2');
 
-@created = make_path( $dir, $dir2 );
-is(scalar @created, 3, 'new-style 3 dirs created in parent with newline');
 
-$count = remove_tree( $dir, $dir2 );
-is($count, 2, 'new-style 2 dirs removed in parent with newline');
+
+SKIP: {
+  # Better to search for *nix derivatives?
+  # Not sure what else doesn't support newline in paths
+  skip "This is a MSWin32 platform", 2
+    if $^O eq 'MSWin32';
+
+  @created = make_path( $dir, $dir2 );
+  is(scalar @created, 3, 'new-style 3 dirs created in parent with newline');
+
+  $count = remove_tree( $dir, $dir2 );
+  is($count, 2, 'new-style 2 dirs removed in parent with newline');
+}
 
 if (chdir updir()) {
     pass("chdir parent");
