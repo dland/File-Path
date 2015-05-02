@@ -58,13 +58,23 @@ sub _error {
     }
 }
 
+sub __is_arg {
+    my ($arg) = @_;
+    # If client code blessed an array ref to HASH, this will not work
+    # properly. We could have done $arg->isa() wrapped in eval, but
+    # that would be expensive. This implementation should suffice.
+    # We could have also used Scalar::Util:blessed, but we choose not
+    # to add this dependency
+    return (ref $arg eq 'HASH');
+}
+
 sub make_path {
-    push @_, {} unless @_ and UNIVERSAL::isa($_[-1],'HASH');
+    push @_, {} unless @_ and __is_arg($_[-1]);
     goto &mkpath;
 }
 
 sub mkpath {
-    my $old_style = !(@_ and UNIVERSAL::isa($_[-1],'HASH'));
+    my $old_style = !(@_ and __is_arg($_[-1]));
 
     my $arg;
     my $paths;
@@ -162,7 +172,7 @@ sub _mkpath {
 }
 
 sub remove_tree {
-    push @_, {} unless @_ and UNIVERSAL::isa($_[-1],'HASH');
+    push @_, {} unless @_ and __is_arg($_[-1]);
     goto &rmtree;
 }
 
@@ -185,7 +195,7 @@ sub _is_subdir {
 }
 
 sub rmtree {
-    my $old_style = !(@_ and UNIVERSAL::isa($_[-1],'HASH'));
+    my $old_style = !(@_ and __is_arg($_[-1]));
 
     my $arg;
     my $paths;
