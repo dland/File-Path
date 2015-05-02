@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 129;
+use Test::More tests => 131;
 use Config;
 
 BEGIN {
@@ -295,6 +295,15 @@ is(scalar @created, 2, 'new-style 2 dirs created');
 $count = remove_tree( $dir, $dir2 );
 is($count, 2, 'new-style 2 dirs removed');
 
+$dir = catdir("a\nb", 'd1');
+$dir2 = catdir("a\nb", 'd2');
+
+@created = make_path( $dir, $dir2 );
+is(scalar @created, 3, 'new-style 3 dirs created in parent with newline');
+
+$count = remove_tree( $dir, $dir2 );
+is($count, 2, 'new-style 2 dirs removed in parent with newline');
+
 if (chdir updir()) {
     pass("chdir parent");
 }
@@ -311,10 +320,10 @@ SKIP: {
         unless defined($UNC_path_taint);
 
     my ($UNC_path) = ($UNC_path_taint =~ m{^([/\\]{2}\w+[/\\]\w+[/\\]\w+)$});
-    
+
     skip "PERL_FILE_PATH_UNC_TESTDIR environment variable does not point to a directory", 1
         unless -d $UNC_path;
-    
+
     my $removed = rmtree($UNC_path);
     cmp_ok($removed, '>', 0, "removed $removed entries from $UNC_path");
 }
@@ -517,14 +526,14 @@ SKIP: {
             unless -e $dir;
 
         $dir = catdir('EXTRA', '3', 'U');
-        stderr_like( 
+        stderr_like(
             sub {rmtree($dir, {verbose => 0})},
             qr{\Acannot make child directory read-write-exec for [^:]+: .* at \S+ line \d+},
             q(rmtree can't chdir into root dir)
         );
 
         $dir = catdir('EXTRA', '3');
-        stderr_like( 
+        stderr_like(
             sub {rmtree($dir, {})},
             qr{\Acannot make child directory read-write-exec for [^:]+: .* at (\S+) line (\d+)
 cannot make child directory read-write-exec for [^:]+: .* at \1 line \2
@@ -533,7 +542,7 @@ cannot remove directory for [^:]+: .* at \1 line \2},
             'rmtree with file owned by root'
         );
 
-        stderr_like( 
+        stderr_like(
             sub {rmtree('EXTRA', {})},
             qr{\Acannot remove directory for [^:]+: .* at (\S+) line (\d+)
 cannot remove directory for [^:]+: .* at \1 line \2
@@ -642,11 +651,11 @@ SKIP: {
     rmtree($tmp_base, {result => \$list} );
     is(ref($list), 'ARRAY', "received a final list of results");
     ok( !(-d $tmp_base), "test base directory gone" );
-    
+
     my $p = getcwd();
     my $x = "x$$";
     my $xx = $x . "x";
-    
+
     # setup
     ok(mkpath($xx), "make $xx");
     ok(chdir($xx), "... and chdir $xx");
@@ -654,7 +663,7 @@ SKIP: {
          ok(chdir($p), "... now chdir $p");
          ok(rmtree($xx), "... and finally rmtree $xx");
     }
-    
+
     # create and delete directory
     my $px = catdir($p, $x);
     ok(mkpath($px), 'create and delete directory 2.07');

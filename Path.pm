@@ -136,7 +136,7 @@ sub _mkpath {
         if ($Is_VMS) {
             next if $path eq '/';
             $path = VMS::Filespec::unixify($path);
-        }
+	 }
         next if -d $path;
         my $parent = File::Basename::dirname($path);
         unless (-d $parent or $path eq $parent) {
@@ -229,7 +229,7 @@ sub rmtree {
         _error($arg, "cannot fetch initial working directory");
         return 0;
     };
-    for ($arg->{cwd}) { /\A(.*)\Z/; $_ = $1 } # untaint
+    for ($arg->{cwd}) { /\A(.*)\Z/s; $_ = $1 } # untaint
 
     for my $p (@$paths) {
         # need to fixup case and map \ to / on Windows
