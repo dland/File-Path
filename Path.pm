@@ -141,6 +141,11 @@ sub _mkpath {
                     _error($arg, "Cannot change ownership of $path to $arg->{owner}:$arg->{group}");
                 }
             }
+            if (exists $arg->{chmod}) {
+                if (!chmod $arg->{chmod} , $path) {
+                    _error($arg, "Cannot change permissions of $path to $arg->{chmod}");
+                }
+            }
         }
         else {
             my $save_bang = $!;
@@ -468,6 +473,9 @@ This document describes version 2.09 of File::Path, released
       verbose => 1,
       mode => 0711,
   });
+  make_path('foo/bar/baz', '/zug/zwang', {
+      chmod => 0777,
+  });
 
   remove_tree('foo/bar/baz', '/zug/zwang');
   remove_tree('foo/bar/baz', '/zug/zwang', {
@@ -522,6 +530,13 @@ directory already exists (and thus does not need to be created),
 the permissions will not be modified.
 
 C<mask> is recognised as an alias for this parameter.
+
+=item chmod => $num
+
+Takes a numeric mode to apply to each created directory (not
+modified by the current C<umask>). If the directory already exists
+(and thus does not need to be created), the permissions will
+not be modified.
 
 =item verbose => $bool
 
