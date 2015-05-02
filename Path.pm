@@ -597,7 +597,7 @@ return value of the function is otherwise identical to make_path().
 
 The C<remove_tree> function deletes the given directories and any
 files and subdirectories they might contain, much like the Unix
-command C<rm -r> or C<del /s> on Windows.
+command C<rm -r> or the Windows commands C<rmdir /s> and C<rd /s>.
 
 The function accepts a list of directories to be
 removed. Its behaviour may be tuned by an optional hashref
