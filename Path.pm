@@ -546,7 +546,7 @@ be used to store any errors that are encountered.  See the L</"ERROR
 HANDLING"> section for more information.
 
 If this parameter is not used, certain error conditions may raise
-a fatal error that will cause the program will halt, unless trapped
+a fatal error that will cause the program to halt, unless trapped
 in an C<eval> block.
 
 =item owner => $owner
