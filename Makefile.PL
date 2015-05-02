@@ -37,5 +37,10 @@ WriteMakefile(
     clean => {
         FILES => 'cover_db',
     },
+    repository  => {
+      url  => 'git://github.com/dland/File-Path',
+      web  => 'http://github.com/dland/File-Path',
+      type => 'git',
+    },
     @license,
 );
