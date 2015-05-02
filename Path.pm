@@ -121,7 +121,7 @@ sub _mkpath {
     my(@created,$path);
     foreach $path (@$paths) {
         next unless defined($path) and length($path);
-        $path .= '/' if $^O eq 'os2' and $path =~ /^\w:\z/s; # feature of CRT 
+        $path .= '/' if $^O eq 'os2' and $path =~ /^\w:\z/s; # feature of CRT
         # Logic wants Unix paths, so go with the flow.
         if ($Is_VMS) {
             next if $path eq '/';
@@ -276,7 +276,8 @@ sub _rmtree {
             : $root
         ;
 
-        my ($ldev, $lino, $perm) = (lstat $root)[0,1,2] or next ROOT_DIR;
+        my ($ldev, $lino, $perm) = (lstat $root)[0,1,2]
+          or ( _error($arg, "$root", $root) and next ROOT_DIR);
 
         if ( -d _ ) {
             $root = VMS::Filespec::vmspath(VMS::Filespec::pathify($root)) if $Is_VMS;
@@ -311,7 +312,7 @@ sub _rmtree {
 
             # notabene: 0700 is for making readable in the first place,
             # it's also intended to change it to writable in case we have
-            # to recurse in which case we are better than rm -rf for 
+            # to recurse in which case we are better than rm -rf for
             # subtrees with strange permissions
 
             if (!($arg->{safe} or $nperm == $perm or chmod($nperm, $curdir))) {
