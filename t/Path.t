@@ -2,8 +2,9 @@
 
 use strict;
 
-use Test::More tests => 133;
+use Test::More tests => 152;
 use Config;
+use Fcntl ':mode';
 
 BEGIN {
     use_ok('Cwd');
@@ -448,6 +449,34 @@ SKIP: {
     local @ARGV = ($dir);
     rmtree( [grep -e $_, @ARGV], 0, 0 );
     ok(!-e $dir, "blow it away via \@ARGV");
+}
+
+SKIP : {
+    my $skip_count = 19;
+    #this test will fail on Windows, as per: http://perldoc.perl.org/perlport.html#chmod
+    skip "Windows chmod test skipped", $skip_count
+        if $^O eq 'MSWin32';
+    my $mode;
+    my $octal_mode;
+    my @inputs = (
+      0777, 0700, 0070, 0007,
+      0333, 0300, 0030, 0003,
+      0111, 0100, 0010, 0001,
+      0731, 0713, 0317, 0371, 0173, 0137,
+      00 );
+    my $input;
+    my $octal_input;
+    $dir = catdir($tmp_base, 'chmod_test');
+
+    foreach (@inputs) {
+        $input = $_;
+        @created = mkpath($dir, {chmod => $input});
+        $mode = (stat($dir))[2];
+        $octal_mode = S_IMODE($mode);
+        $octal_input = sprintf "%04o", S_IMODE($input);
+        is($octal_mode,$input, "create a new directory with chmod $input ($octal_input)");
+        rmtree( $dir );
+    }
 }
 
 SKIP: {
