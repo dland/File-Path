@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 131;
+use Test::More tests => 133;
 use Config;
 
 BEGIN {
@@ -298,11 +298,20 @@ is($count, 2, 'new-style 2 dirs removed');
 $dir = catdir("a\nb", 'd1');
 $dir2 = catdir("a\nb", 'd2');
 
-@created = make_path( $dir, $dir2 );
-is(scalar @created, 3, 'new-style 3 dirs created in parent with newline');
 
-$count = remove_tree( $dir, $dir2 );
-is($count, 2, 'new-style 2 dirs removed in parent with newline');
+
+SKIP: {
+  # Better to search for *nix derivatives?
+  # Not sure what else doesn't support newline in paths
+  skip "This is a MSWin32 platform", 2
+    if $^O eq 'MSWin32';
+
+  @created = make_path( $dir, $dir2 );
+  is(scalar @created, 3, 'new-style 3 dirs created in parent with newline');
+
+  $count = remove_tree( $dir, $dir2 );
+  is($count, 2, 'new-style 2 dirs removed in parent with newline');
+}
 
 if (chdir updir()) {
     pass("chdir parent");
@@ -312,17 +321,16 @@ else {
 }
 
 SKIP: {
-    skip "This is not a MSWin32 platform", 1
+    skip "This is not a MSWin32 platform", 3
         unless $^O eq 'MSWin32';
 
-    my $UNC_path_taint = $ENV{PERL_FILE_PATH_UNC_TESTDIR};
-    skip "PERL_FILE_PATH_UNC_TESTDIR environment variable not set", 1
-        unless defined($UNC_path_taint);
-
-    my ($UNC_path) = ($UNC_path_taint =~ m{^([/\\]{2}\w+[/\\]\w+[/\\]\w+)$});
-
-    skip "PERL_FILE_PATH_UNC_TESTDIR environment variable does not point to a directory", 1
-        unless -d $UNC_path;
+    my $UNC_path = catdir(getcwd(), $tmp_base, 'uncdir');
+    #dont compute a SMB path with $ENV{COMPUTERNAME}, since SMB may be turned off
+    #firewalled, disabled, blocked, or no NICs are on and there the PC has no
+    #working TCPIP stack, \\?\ will always work
+    $UNC_path = '\\\\?\\'.$UNC_path;
+    is(mkpath($UNC_path), 1, 'mkpath on Win32 UNC path returns made 1 dir');
+    ok(-d $UNC_path, 'mkpath on Win32 UNC path made dir');
 
     my $removed = rmtree($UNC_path);
     cmp_ok($removed, '>', 0, "removed $removed entries from $UNC_path");

@@ -35,7 +35,7 @@ WriteMakefile(
         @extra_prereq,
     },
     clean => {
-        FILES => 'cover_db',
+        FILES => 'cover_db test-*',
     },
     repository  => {
       url  => 'git://github.com/dland/File-Path.git',

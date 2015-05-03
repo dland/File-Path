@@ -473,28 +473,28 @@ This document describes version 2.09 of File::Path, released
 
   use File::Path qw(make_path remove_tree);
 
-  make_path('foo/bar/baz', '/zug/zwang');
-  make_path('foo/bar/baz', '/zug/zwang', {
+  @created = make_path('foo/bar/baz', '/zug/zwang');
+  @created = make_path('foo/bar/baz', '/zug/zwang', {
       verbose => 1,
       mode => 0711,
   });
 
-  remove_tree('foo/bar/baz', '/zug/zwang');
-  remove_tree('foo/bar/baz', '/zug/zwang', {
+  $removed_count = remove_tree('foo/bar/baz', '/zug/zwang');
+  $removed_count = remove_tree('foo/bar/baz', '/zug/zwang', {
       verbose => 1,
       error  => \my $err_list,
   });
 
   # legacy (interface promoted before v2.00)
-  mkpath('/foo/bar/baz');
-  mkpath('/foo/bar/baz', 1, 0711);
-  mkpath(['/foo/bar/baz', 'blurfl/quux'], 1, 0711);
-  rmtree('foo/bar/baz', 1, 1);
-  rmtree(['foo/bar/baz', 'blurfl/quux'], 1, 1);
+  @created = mkpath('/foo/bar/baz');
+  @created = mkpath('/foo/bar/baz', 1, 0711);
+  @created = mkpath(['/foo/bar/baz', 'blurfl/quux'], 1, 0711);
+  $removed_count = rmtree('foo/bar/baz', 1, 1);
+  $removed_count = rmtree(['foo/bar/baz', 'blurfl/quux'], 1, 1);
 
   # legacy (interface promoted before v2.06)
-  mkpath('foo/bar/baz', '/zug/zwang', { verbose => 1, mode => 0711 });
-  rmtree('foo/bar/baz', '/zug/zwang', { verbose => 1, mode => 0711 });
+  @created = mkpath('foo/bar/baz', '/zug/zwang', { verbose => 1, mode => 0711 });
+  $removed_count = rmtree('foo/bar/baz', '/zug/zwang', { verbose => 1, mode => 0711 });
 
 =head1 DESCRIPTION
 
@@ -597,7 +597,7 @@ return value of the function is otherwise identical to make_path().
 
 The C<remove_tree> function deletes the given directories and any
 files and subdirectories they might contain, much like the Unix
-command C<rm -r> or C<del /s> on Windows.
+command C<rm -r> or the Windows commands C<rmdir /s> and C<rd /s>.
 
 The function accepts a list of directories to be
 removed. Its behaviour may be tuned by an optional hashref
