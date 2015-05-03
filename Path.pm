@@ -998,6 +998,24 @@ Gisle Aas made a number of improvements to the documentation for
 Tim Bunce and Charles Bailey. Currently maintained by David Landgren
 <F<david@landgren.net>>.
 
+=head1 CONTRIBUTORS
+
+Contributors to File::Path, in alphabetical order.
+
+=over 1
+
+=item <F<bulkdd@cpan.org>>
+
+=item Richard Elberger <F<riche@cpan.org>>
+
+=item Ryan Yee <F<ryee@cpan.org>>
+
+=item Skye Shaw <F<shaw@cpan.org>>
+
+=item Tom Lutz <F<tommylutz@gmail.com>>
+
+=back
+
 =head1 COPYRIGHT
 
 This module is copyright (C) Charles Bailey, Tim Bunce and
