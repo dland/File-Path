@@ -10,3 +10,4 @@ eg/setup-extra-tests
 t/Path.t
 t/pod.t
 t/taint.t
+t/Path-Class.t
