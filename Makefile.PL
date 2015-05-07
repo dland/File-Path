@@ -8,19 +8,6 @@ use ExtUtils::MakeMaker;
 eval "use ExtUtils::MakeMaker::Coverage";
 $@ or print "Adding testcover target\n";
 
-my @license =
-    do {
-        my $version = $ExtUtils::MakeMaker::VERSION;
-        $version =~ tr/_//d;
-        $version
-    } > 6.30
-    ? qw(LICENSE perl)
-    : ();
-
-my @extra_prereq = (
-    $] < 5.006 ? ('Symbol' => 0) : (),
-);
-
 WriteMakefile(
     NAME          => 'File::Path',
     VERSION_FROM  => 'Path.pm',
@@ -32,15 +19,20 @@ WriteMakefile(
         'Cwd'            => 0,
         'File::Basename' => 0,
         'File::Spec'     => 0,
-        @extra_prereq,
+        ( eval { $] < 5.006 } ? ( 'Symbol' => 0 ) : () ),
     },
     clean => {
         FILES => 'cover_db test-*',
     },
-    repository  => {
-      url  => 'git://github.com/dland/File-Path.git',
-      web  => 'http://github.com/dland/File-Path',
-      type => 'git',
-    },
-    @license,
+    (eval { ExtUtils::MakeMaker->VERSION(6.46) } ? ( META_MERGE => {
+      'meta-spec' => { version => 2 },
+      resources => {
+        repository  => {
+          url  => 'https://github.com/dland/File-Path.git',
+          web  => 'https://github.com/dland/File-Path',
+          type => 'git',
+        },
+      },
+      license => 'perl',
+    }) : () ),
 );
