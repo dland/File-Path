@@ -48,7 +48,8 @@ Revision history for Perl extension File::Path.
       from Gisle Aas.
 
 2.06_06 2008-10-05 21:55:34 UTC
-    - Documentation improvements, no code changes.
+    - Documentation improvements, no code changes.  In this version
+      rm_tree() was renamed to remove_tree().
 
 2.06_05 2008-10-02 20:30:17 UTC
     - Introduce make_path() and rm_tree() API extension.
