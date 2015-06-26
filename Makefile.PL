@@ -1,6 +1,7 @@
 # generate Makefile for building File::Path
 #
 # Copyright (C) 2007 David Landgren
+# Copyright (C) 2015 Richard Elberger
 
 use strict;
 use ExtUtils::MakeMaker;
@@ -12,7 +13,7 @@ WriteMakefile(
     NAME          => 'File::Path',
     VERSION_FROM  => 'Path.pm',
     ABSTRACT_FROM => 'Path.pm',
-    AUTHOR        => 'David Landgren',
+    AUTHOR        => 'Richard Elberger',
     INSTALLDIRS   => ($] >= 5.008001 ? 'perl' : 'site'),
     PREREQ_PM => {
         'Carp'           => 0,
@@ -28,8 +29,8 @@ WriteMakefile(
       'meta-spec' => { version => 2 },
       resources => {
         repository  => {
-          url  => 'https://github.com/dland/File-Path.git',
-          web  => 'https://github.com/dland/File-Path',
+          url  => 'https://github.com/rpcme/File-Path.git',
+          web  => 'https://github.com/rpcme/File-Path',
           type => 'git',
         },
       },

@@ -982,7 +982,7 @@ L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Path>
 
 You can also send pull requests to the Github repository:
 
-L<https://github.com/dland/File-Path>
+L<https://github.com/rpcme/File-Path>
 
 =head1 ACKNOWLEDGEMENTS
 
@@ -996,8 +996,11 @@ Gisle Aas made a number of improvements to the documentation for
 
 =head1 AUTHORS
 
-Tim Bunce and Charles Bailey. Currently maintained by David Landgren
-<F<david@landgren.net>>.
+Prior authors and maintainers: Tim Bunce, Charles Bailey, and
+David Landgren <F<david@landgren.net>>.
+
+Current maintainers are Richard Elberger <F<riche@cpan.org>> and
+James (Jim) Keenan <F<jkeenan@cpan.org>>.
 
 =head1 CONTRIBUTORS
 
@@ -1019,8 +1022,8 @@ Contributors to File::Path, in alphabetical order.
 
 =head1 COPYRIGHT
 
-This module is copyright (C) Charles Bailey, Tim Bunce and
-David Landgren 1995-2013. All rights reserved.
+This module is copyright (C) Charles Bailey, Tim Bunce, David Landgren,
+and Richard Elberger 1995-2015. All rights reserved.
 
 =head1 LICENSE
 
