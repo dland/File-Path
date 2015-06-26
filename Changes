@@ -1,6 +1,13 @@
 Revision history for Perl extension File::Path.
 
-<date pending>
+2.10_002 2015-06-26
+    - RT 95149.  Belated mention in this file that rm_tree has been renamed
+      from rm_tree.
+    - RT 42139.  Add better SKIP test emit for VMS.
+    - RT 85360.  Fix typos and better .gitignore and MANIFEST.SKIP settings.
+    - RT 51588.  Added patch elements but unable to verify on VMS.
+
+2.10_001 2015-06-24
     - RT 39949.  Report errors on lstat failure.
     - RT 53178.  Deprecate UNIVERSAL::isa usage
     - RT 70657.  Test added.
