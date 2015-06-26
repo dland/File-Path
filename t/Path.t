@@ -345,7 +345,7 @@ SKIP: {
     $dir  = 'bug487319';
     $dir2 = 'bug487319-symlink';
     @created = make_path($dir, {mask => 0700});
-    is(scalar @created, 1, 'bug 487319 setup');
+    is( scalar @created, 1, 'bug 487319 setup' );
     symlink($dir, $dir2);
     ok(-e $dir2, "debian bug 487319 setup symlink") or diag($dir2);
 
@@ -376,7 +376,9 @@ SKIP: {
 
 # see what happens if a file exists where we want a directory
 SKIP: {
-    my $entry = catdir($tmp_base, "file");
+    my $entry = catfile($tmp_base, "file");
+    skip "VMS can have a file and a directory with the same name.", 4
+        if $Is_VMS;
     skip "Cannot create $entry", 4 unless open OUT, "> $entry";
     print OUT "test file, safe to delete\n", scalar(localtime), "\n";
     close OUT;
