@@ -376,6 +376,7 @@ SKIP: {
     is( $mask, $mask_initial, 'mask of symlink target file unchanged (debian bug 487319)');
 
     remove_tree($dir);
+    remove_tree($file);
 }
 
 # see what happens if a file exists where we want a directory
