@@ -977,9 +977,16 @@ to examining directory trees.
 
 =head1 BUGS AND LIMITATIONS
 
-Please report all bugs on the RT queue:
+Please report all bugs on the RT queue, either via the web interface:
 
 L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Path>
+
+or by email:
+
+    bug-File-Path@rt.cpan.org
+
+In either case, please B<attach> patches to the bug report rather than
+including them inline in the web post or the body of the email.
 
 You can also send pull requests to the Github repository:
 
