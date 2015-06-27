@@ -1,8 +1,9 @@
+#! /usr/bin/env perl
 # Path.t -- tests for module File::Path
 
 use strict;
 
-use Test::More tests => 152;
+use Test::More tests => 154;
 use Config;
 use Fcntl ':mode';
 
@@ -357,15 +358,18 @@ SKIP: {
     is( $mask, $mask_initial, 'mask of symlink target dir unchanged (debian bug 487319)');
 
     # now try a file
-    my $file = catfile($dir, 'file');
+    #my $file = catfile($dir, 'file');
+    my $file  = 'bug487319-file';
+    my $file2 = 'bug487319-file-symlink';
     open my $out, '>', $file;
     close $out;
+    ok(-e $file, 'file exists');
 
     chmod 0500, $file;
     $mask_initial = (stat $file)[2];
 
-    my $file2 = catfile($dir, 'symlink');
     symlink($file, $file2);
+    ok(-e $file2, 'file2 exists');
     remove_tree($file2);
 
     $mask = (stat $file)[2];

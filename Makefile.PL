@@ -1,18 +1,18 @@
 # generate Makefile for building File::Path
 #
 # Copyright (C) 2007 David Landgren
-# Copyright (C) 2015 Richard Elberger
+# Copyright (C) 2015 Richard Elberger, James Keenan
 
 use strict;
 use ExtUtils::MakeMaker;
 
-eval "use ExtUtils::MakeMaker::Coverage";
-$@ or print "Adding testcover target\n";
+#eval "use ExtUtils::MakeMaker::Coverage";
+#$@ or print "Adding testcover target\n";
 
 WriteMakefile(
     NAME          => 'File::Path',
-    VERSION_FROM  => 'Path.pm',
-    ABSTRACT_FROM => 'Path.pm',
+    VERSION_FROM  => 'lib/File/Path.pm',
+    ABSTRACT_FROM => 'lib/File/Path.pm',
     AUTHOR        => 'Richard Elberger',
     INSTALLDIRS   => ($] >= 5.008001 ? 'perl' : 'site'),
     PREREQ_PM => {

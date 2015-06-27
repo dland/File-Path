@@ -3,7 +3,7 @@ MANIFEST			This list of files
 MANIFEST.SKIP
 META.yml
 Makefile.PL
-Path.pm
+lib/File/Path.pm
 README
 TODO
 eg/setup-extra-tests

@@ -1,8 +1,6 @@
 Revision history for Perl extension File::Path.
 
 2.10_002 2015-06-26
-    - RT 95149.  Belated mention in this file that remove_tree has been
-      renamed from rm_tree.
     - RT 42139.  Add better SKIP test emit for VMS.
     - RT 85360.  Fix typos and better .gitignore and MANIFEST.SKIP settings.
     - RT 51588.  Added patch elements but unable to verify on VMS.
