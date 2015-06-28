@@ -1,13 +1,14 @@
 Changes
+eg/setup-extra-tests
+lib/File/Path.pm
+Makefile.PL
 MANIFEST			This list of files
 MANIFEST.SKIP
 META.yml
-Makefile.PL
-lib/File/Path.pm
 README
-TODO
-eg/setup-extra-tests
+README.md
+t/Path-Class.t
 t/Path.t
 t/pod.t
 t/taint.t
-t/Path-Class.t
+TODO
