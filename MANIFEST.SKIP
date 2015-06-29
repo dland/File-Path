@@ -36,3 +36,7 @@ svndiff/
 ^htmlify
 .git/
 ^MYMETA.*
+\.gitignore
+\.travis.yml
+\README.md
+
