@@ -1,13 +1,16 @@
+.gitignore
+.travis.yml
 Changes
+eg/setup-extra-tests
+lib/File/Path.pm
+Makefile.PL
 MANIFEST			This list of files
 MANIFEST.SKIP
 META.yml
-Makefile.PL
-lib/File/Path.pm
+Path.pm
 README
-TODO
-eg/setup-extra-tests
-t/Path.t
-t/pod.t
-t/taint.t
+README.md
 t/Path-Class.t
+t/Path.t
+t/taint.t
+TODO
