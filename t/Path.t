@@ -3,7 +3,7 @@
 
 use strict;
 
-use Test::More tests => 154;
+use Test::More tests => 159;
 use Config;
 use Fcntl ':mode';
 
@@ -561,7 +561,7 @@ unable to map $max_group to a gid, group ownership not changed: .* at \S+ line \
 }
 
 SKIP: {
-    skip 'Test::Output not available', 14
+    skip 'Test::Output not available', 17
         unless $has_Test_Output;
 
     SKIP: {
@@ -620,6 +620,7 @@ cannot remove directory for [^:]+: .* at \1 line \2},
 
     stderr_is( sub { make_path() }, '', "make_path no args does not carp" );
     stderr_is( sub { remove_tree() }, '', "remove_tree no args does not carp" );
+    stderr_is( sub { mkpath() }, '', "mkpath no args does not carp" );
 
     stdout_is(
         sub {@created = mkpath($dir, 1)},
@@ -649,6 +650,36 @@ cannot remove directory for [^:]+: .* at \1 line \2},
         sub {@created = mkpath($dir2, 1, 0771)},
         "mkdir $dir2\n",
         'mkpath verbose (new style 2)'
+    );
+
+    stdout_is(
+        sub {$count = rmtree([$dir, $dir2], 1, 1)},
+        "rmdir $dir\nrmdir $dir2\n",
+        'again: rmtree verbose (old style)'
+    );
+
+    stdout_is(
+        sub {
+            @created = make_path(
+                $dir,
+                $dir2,
+                { verbose => 1, mode => 0711 }
+            );
+        },
+        "mkdir $dir\nmkdir $dir2\n",
+        'make_path verbose with final hashref'
+    );
+
+    stdout_is(
+        sub {
+            @created = remove_tree(
+                $dir,
+                $dir2,
+                { verbose => 1 }
+            );
+        },
+        "rmdir $dir\nrmdir $dir2\n",
+        'remove_tree verbose with final hashref'
     );
 
     SKIP: {
@@ -713,3 +744,11 @@ SKIP: {
     ok(mkpath($px), 'create and delete directory 2.07');
     ok(rmtree($px), '.. rmtree fails in File-Path-2.07');
 }
+
+my $windows_dir = 'C:\Path\To\Dir';
+my $expect = 'c:/path/to/dir';
+is(
+    File::Path::_slash_lc($windows_dir),
+    $expect,
+    "Windows path unixified as expected"
+);
