@@ -295,7 +295,7 @@ sub _rmtree {
 
     my ( @files, $root );
   ROOT_DIR:
-    foreach $root (@$paths) {
+    foreach my $root (@$paths) {
 
         # since we chdir into each directory, it may not be obvious
         # to figure out where we are if we generate a message about
@@ -379,8 +379,7 @@ sub _rmtree {
                 @files = ();
             }
             else {
-                no strict 'refs';
-                if ( !defined ${"\cTAINT"} or ${"\cTAINT"} ) {
+                if ( !defined ${^TAINT} or ${^TAINT} ) {
 
                     # Blindly untaint dir names if taint mode is
                     # active, or any perl < 5.006
