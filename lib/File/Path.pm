@@ -380,9 +380,7 @@ sub _rmtree {
             }
             else {
                 if ( !defined ${^TAINT} or ${^TAINT} ) {
-
-                    # Blindly untaint dir names if taint mode is
-                    # active, or any perl < 5.006
+                    # Blindly untaint dir names if taint mode is active
                     @files = map { /\A(.*)\z/s; $1 } readdir $d;
                 }
                 else {
