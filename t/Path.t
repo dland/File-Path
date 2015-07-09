@@ -628,7 +628,7 @@ unable to map $max_group to a gid, group ownership not changed: .* at \S+ line \
 }
 
 SKIP: {
-    skip 'Test::Output not available', 17
+    skip 'Test::Output not available', 18
         unless $has_Test_Output;
 
     SKIP: {
