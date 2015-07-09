@@ -24,16 +24,22 @@ $VERSION   = eval $VERSION;
 @EXPORT    = qw(mkpath rmtree);
 @EXPORT_OK = qw(make_path remove_tree);
 
-my $is_vms   = $^O eq 'VMS';
-my $is_macos = $^O eq 'MacOS';
+BEGIN {
+  for (qw(VMS MacOS MSWin32 os2)) {
+    no strict 'refs';
+    *{"_IS_\U$_"} = $^O eq $_ ? sub () { 1 } : sub () { 0 };
+  }
 
-# These OSes complain if you want to remove a file that you have no
-# write permission to:
-my $force_writeable = grep { $^O eq $_ } qw(amigaos dos epoc MSWin32 MacOS os2);
+  # These OSes complain if you want to remove a file that you have no
+  # write permission to:
+  *_FORCE_WRITABLE = (
+    grep { $^O eq $_ } qw(amigaos dos epoc MSWin32 MacOS os2)
+  ) ? sub () { 1 } : sub () { 0 };
 
-# Unix-like systems need to stat each directory in order to detect
-# race condition. MS-Windows is immune to this particular attack.
-my $need_stat_check = !( $^O eq 'MSWin32' );
+  # Unix-like systems need to stat each directory in order to detect
+  # race condition. MS-Windows is immune to this particular attack.
+  *_NEED_STAT_CHECK = !(_IS_MSWIN32()) ? sub () { 1 } : sub () { 0 };
+}
 
 sub _carp {
     require Carp;
@@ -138,10 +144,10 @@ sub _mkpath {
     my ( @created );
     foreach my $path ( @{$paths} ) {
         next unless defined($path) and length($path);
-        $path .= '/' if $^O eq 'os2' and $path =~ /^\w:\z/s; # feature of CRT
+        $path .= '/' if _IS_OS2 and $path =~ /^\w:\z/s; # feature of CRT
 
         # Logic wants Unix paths, so go with the flow.
-        if ($is_vms) {
+        if (_IS_VMS) {
             next if $path eq '/';
             $path = VMS::Filespec::unixify($path);
         }
@@ -252,22 +258,22 @@ sub rmtree {
     for my $p (@$paths) {
 
         # need to fixup case and map \ to / on Windows
-        my $ortho_root = $^O eq 'MSWin32' ? _slash_lc($p) : $p;
+        my $ortho_root = _IS_MSWIN32 ? _slash_lc($p) : $p;
         my $ortho_cwd =
-          $^O eq 'MSWin32' ? _slash_lc( $arg->{cwd} ) : $arg->{cwd};
+          _IS_MSWIN32 ? _slash_lc( $arg->{cwd} ) : $arg->{cwd};
         my $ortho_root_length = length($ortho_root);
-        $ortho_root_length-- if $^O eq 'VMS';   # don't compare '.' with ']'
+        $ortho_root_length-- if _IS_VMS;   # don't compare '.' with ']'
         if ( $ortho_root_length && _is_subdir( $ortho_root, $ortho_cwd ) ) {
             local $! = 0;
             _error( $arg, "cannot remove path when cwd is $arg->{cwd}", $p );
             next;
         }
 
-        if ($is_macos) {
+        if (_IS_MACOS) {
             $p = ":$p" unless $p =~ /:/;
             $p .= ":" unless $p =~ /:\z/;
         }
-        elsif ( $^O eq 'MSWin32' ) {
+        elsif ( _IS_MSWIN32 ) {
             $p =~ s{[/\\]\z}{};
         }
         else {
@@ -312,7 +318,7 @@ sub _rmtree {
 
         if ( -d _ ) {
             $root = VMS::Filespec::vmspath( VMS::Filespec::pathify($root) )
-              if $is_vms;
+              if _IS_VMS;
 
             if ( !chdir($root) ) {
 
@@ -344,7 +350,7 @@ sub _rmtree {
                 next ROOT_DIR;
               };
 
-            if ($need_stat_check) {
+            if (_NEED_STAT_CHECK) {
                 ( $ldev eq $cur_dev and $lino eq $cur_inode )
                   or _croak(
 "directory $canon changed before chdir, expected dev=$ldev ino=$lino, actual dev=$cur_dev ino=$cur_inode, aborting."
@@ -388,7 +394,7 @@ sub _rmtree {
                 closedir $d;
             }
 
-            if ($is_vms) {
+            if (_IS_VMS) {
 
                 # Deleting large numbers of files from VMS Files-11
                 # filesystems is faster if done in reverse ASCIIbetical order.
@@ -426,7 +432,7 @@ sub _rmtree {
                 "cannot stat prior working directory $arg->{cwd}: $!, aborting."
               );
 
-            if ($need_stat_check) {
+            if (_NEED_STAT_CHECK) {
                 ( $arg->{device} eq $cur_dev and $arg->{inode} eq $cur_inode )
                   or _croak(  "previous directory $arg->{cwd} "
                             . "changed before entering $canon, "
@@ -437,14 +443,14 @@ sub _rmtree {
 
             if ( $arg->{depth} or !$arg->{keep_root} ) {
                 if ( $arg->{safe}
-                    && ( $is_vms
+                    && ( _IS_VMS
                         ? !&VMS::Filespec::candelete($root)
                         : !-w $root ) )
                 {
                     print "skipped $root\n" if $arg->{verbose};
                     next ROOT_DIR;
                 }
-                if ( $force_writeable and !chmod $perm | oct '700', $root ) {
+                if ( _FORCE_WRITABLE and !chmod $perm | oct '700', $root ) {
                     _error( $arg, "cannot make directory writeable", $canon );
                 }
                 print "rmdir $root\n" if $arg->{verbose};
@@ -455,9 +461,9 @@ sub _rmtree {
                 else {
                     _error( $arg, "cannot remove directory", $canon );
                     if (
-                        $force_writeable
+                        _FORCE_WRITABLE
                         && !chmod( $perm,
-                            ( $is_vms ? VMS::Filespec::fileify($root) : $root )
+                            ( _IS_VMS ? VMS::Filespec::fileify($root) : $root )
                         )
                       )
                     {
@@ -474,14 +480,14 @@ sub _rmtree {
         else {
             # not a directory
             $root = VMS::Filespec::vmsify("./$root")
-              if $is_vms
+              if _IS_VMS
               && !File::Spec->file_name_is_absolute($root)
               && ( $root !~ m/(?<!\^)[\]>]+/ );    # not already in VMS syntax
 
             if (
                 $arg->{safe}
                 && (
-                    $is_vms
+                    _IS_VMS
                     ? !&VMS::Filespec::candelete($root)
                     : !( -l $root || -w $root )
                 )
@@ -492,7 +498,7 @@ sub _rmtree {
             }
 
             my $nperm = $perm & oct '7777' | oct '600';
-            if (    $force_writeable
+            if (    _FORCE_WRITABLE
                 and $nperm != $perm
                 and not chmod $nperm, $root )
             {
@@ -507,14 +513,14 @@ sub _rmtree {
                 }
                 else {
                     _error( $arg, "cannot unlink file", $canon );
-                    $force_writeable and chmod( $perm, $root )
+                    _FORCE_WRITABLE and chmod( $perm, $root )
                       or _error( $arg,
                         sprintf( "cannot restore permissions to 0%o", $perm ),
                         $canon );
                     last;
                 }
                 ++$count;
-                last unless $is_vms && lstat $root;
+                last unless _IS_VMS && lstat $root;
             }
         }
     }
