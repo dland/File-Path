@@ -3,7 +3,7 @@
 
 use strict;
 
-use Test::More tests => 159;
+use Test::More tests => 161;
 use Config;
 use Fcntl ':mode';
 
@@ -736,6 +736,36 @@ cannot remove directory for [^:]+: .* at \1 line \2},
         "mkdir $dir\nmkdir $dir2\n",
         'make_path verbose with final hashref'
     );
+
+    {
+        local $@;
+        eval {
+            @created = make_path(
+                $dir,
+                $dir2,
+                { verbose => 1, mode => 0711, foo => 1, bar => 1 }
+            );
+        };
+        like($@,
+            qr/Unrecognized option\(s\) passed to make_path\(\):.*?bar.*?foo/,
+            'make_path with final hashref failed due to unrecognized options'
+        );
+    }
+
+    {
+        local $@;
+        eval {
+            @created = remove_tree(
+                $dir,
+                $dir2,
+                { verbose => 1, foo => 1, bar => 1 }
+            );
+        };
+        like($@,
+            qr/Unrecognized option\(s\) passed to remove_tree\(\):.*?bar.*?foo/,
+            'remove_tree with final hashref failed due to unrecognized options'
+        );
+    }
 
     stdout_is(
         sub {

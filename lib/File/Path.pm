@@ -96,7 +96,24 @@ sub mkpath {
         $arg->{mode} = defined $mode ? $mode : oct '777';
     }
     else {
+        my %args_permitted = map { $_ => 1 } ( qw|
+            chmod
+            error
+            group
+            mask
+            mode
+            owner
+            uid
+            user
+            verbose
+        | );
+        my @bad_args = ();
         $arg = pop @_;
+        for my $k (sort keys %{$arg}) {
+            push @bad_args, $k unless $args_permitted{$k};
+        }
+        _croak("Unrecognized option(s) passed to make_path(): @bad_args")
+            if @bad_args;
         $arg->{mode} = delete $arg->{mask} if exists $arg->{mask};
         $arg->{mode} = oct '777' unless exists $arg->{mode};
         ${ $arg->{error} } = [] if exists $arg->{error};
@@ -239,7 +256,20 @@ sub rmtree {
         }
     }
     else {
+        my %args_permitted = map { $_ => 1 } ( qw|
+            error
+            keep_root
+            result
+            safe
+            verbose
+        | );
+        my @bad_args = ();
         $arg = pop @_;
+        for my $k (sort keys %{$arg}) {
+            push @bad_args, $k unless $args_permitted{$k};
+        }
+        _croak("Unrecognized option(s) passed to remove_tree(): @bad_args")
+            if @bad_args;
         ${ $arg->{error} }  = [] if exists $arg->{error};
         ${ $arg->{result} } = [] if exists $arg->{result};
         $paths = [@_];
