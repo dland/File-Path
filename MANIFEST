@@ -1,5 +1,3 @@
-.gitignore
-.travis.yml
 Changes
 eg/setup-extra-tests
 lib/File/Path.pm
