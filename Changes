@@ -1,6 +1,6 @@
 Revision history for Perl extension File::Path.
 
-2.10_005
+2.10_005 2015-07-17
     - Better argument checking and reporting of failure for unrecognized
       options.
     - RT 71562 Document automount race condition limitation and workaround

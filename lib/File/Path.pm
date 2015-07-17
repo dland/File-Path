@@ -1,6 +1,6 @@
 package File::Path;
 
-use 5.005_04;
+use 5.005_05;
 use strict;
 
 use Cwd 'getcwd';
