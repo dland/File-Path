@@ -1,6 +1,6 @@
 package File::Path;
 
-use 5.005_05;
+use 5.005_04;
 use strict;
 
 use Cwd 'getcwd';
@@ -18,7 +18,7 @@ BEGIN {
 
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
-$VERSION   = '2.10_004';
+$VERSION   = '2.10_005';
 $VERSION   = eval $VERSION;
 @ISA       = qw(Exporter);
 @EXPORT    = qw(mkpath rmtree);
