@@ -1080,6 +1080,27 @@ to examining directory trees.
 
 =head1 BUGS AND LIMITATIONS
 
+The following describes F<File::Path> limitations and how to report bugs.
+
+=head2 MULTITHREAD APPLICATIONS
+
+F<File::Path> B<rmtree> and B<remove_tree> will not work with multithreaded
+applications due to its use of B<chdir>.  At this time, no warning or error
+results and you will certainly encounter unexpected results.
+
+The implementation that surfaces this limitation may change in a future
+release.
+
+=head2 NFS Mount Points
+
+F<File::Path> is not responsible for triggering the automounts, mirror mounts,
+and the contents of network mounted filesystems.  If your NFS implementation
+requires an action to be performed on the filesystem in order for
+F<File::Path> to perform operations, it is strongly suggested you assure
+filesystem availability by reading the root of the mounted filesystem.
+
+=head2 REPORTING BUGS
+
 Please report all bugs on the RT queue, either via the web interface:
 
 L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Path>
