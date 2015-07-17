@@ -1,5 +1,20 @@
 Revision history for Perl extension File::Path.
 
+2.10_005
+    - Better argument checking and reporting of failure for unrecognized
+      options.
+
+2.10_004 2015-07-10
+    - Remove use of English.pm since it breaks many older Perls
+    - Fix a unit test skip count for users who have not installed
+      Test::Output
+
+2.10_003 2015-07-08
+    - Administrative changes to MANIFEST and MANIFEST.SKIP
+    - Style changes to Path.pm for easier reading of code
+    - Removal of pod.t
+    - Use English.pm to make variables like $! more fluent for code readers
+
 2.10_002 2015-06-26
     - RT 42139.  Add better SKIP test emit for VMS.
     - RT 85360.  Fix typos and better .gitignore and MANIFEST.SKIP settings.
