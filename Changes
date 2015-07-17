@@ -3,6 +3,9 @@ Revision history for Perl extension File::Path.
 2.10_005
     - Better argument checking and reporting of failure for unrecognized
       options.
+    - RT 71562 Document automount race condition limitation and workaround
+    - RT 99230 Document multithreaded application limitation and that the
+      limitation may be removed in a future release.
 
 2.10_004 2015-07-10
     - Remove use of English.pm since it breaks many older Perls
