@@ -628,7 +628,7 @@ unable to map $max_group to a gid, group ownership not changed: .* at \S+ line \
 }
 
 SKIP: {
-    skip 'Test::Output not available', 18
+    skip 'Test::Output not available', 13
         unless $has_Test_Output;
 
     SKIP: {
@@ -672,22 +672,6 @@ cannot remove directory for [^:]+: .* at \1 line \2},
     my $base = catdir($tmp_base,'output');
     $dir  = catdir($base,'A');
     $dir2 = catdir($base,'B');
-
-    stderr_like(
-        sub { rmtree( undef, 1 ) },
-        qr/\ANo root path\(s\) specified\b/,
-        "rmtree of nothing carps sensibly"
-    );
-
-    stderr_like(
-        sub { rmtree( '', 1 ) },
-        qr/\ANo root path\(s\) specified\b/,
-        "rmtree of empty dir carps sensibly"
-    );
-
-    stderr_is( sub { make_path() }, '', "make_path no args does not carp" );
-    stderr_is( sub { remove_tree() }, '', "remove_tree no args does not carp" );
-    stderr_is( sub { mkpath() }, '', "mkpath no args does not carp" );
 
     stdout_is(
         sub {@created = mkpath($dir, 1)},
@@ -815,6 +799,59 @@ SKIP: {
                 or diag($message)
         }
     }
+}
+
+{
+    my $base = catdir($tmp_base,'output');
+    $dir  = catdir($base,'A');
+    $dir2 = catdir($base,'B');
+
+    {
+        my $warn;
+        $SIG{__WARN__} = sub { $warn = shift };
+
+        rmtree( undef, 1 );
+        like($warn,
+            qr/No root path\(s\) specified/,
+            "rmtree of nothing carps sensibly"
+        );
+    }
+
+    {
+        my $warn;
+        $SIG{__WARN__} = sub { $warn = shift };
+
+        rmtree( '', 1 );
+        like($warn,
+            qr/\ANo root path\(s\) specified\b/,
+            "rmtree of empty dir carps sensibly"
+        );
+    }
+
+    {
+        my $warn;
+        $SIG{__WARN__} = sub { $warn = shift };
+
+        make_path();
+        ok(! $warn, "make_path no args does not carp");
+    }
+
+    {
+        my $warn;
+        $SIG{__WARN__} = sub { $warn = shift };
+
+        remove_tree();
+        ok(! $warn, "remove_tree no args does not carp");
+    }
+
+    {
+        my $warn;
+        $SIG{__WARN__} = sub { $warn = shift };
+
+        mkpath();
+        ok(! $warn, "mkpath no args does not carp");
+    }
+
 }
 
 SKIP: {
