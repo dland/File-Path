@@ -18,7 +18,7 @@ BEGIN {
 
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
-$VERSION   = '2.10_005';
+$VERSION   = '2.11';
 $VERSION   = eval $VERSION;
 @ISA       = qw(Exporter);
 @EXPORT    = qw(mkpath rmtree);
@@ -112,7 +112,7 @@ sub mkpath {
         for my $k (sort keys %{$arg}) {
             push @bad_args, $k unless $args_permitted{$k};
         }
-        _croak("Unrecognized option(s) passed to make_path(): @bad_args")
+        _carp("Unrecognized option(s) passed to make_path(): @bad_args")
             if @bad_args;
         $arg->{mode} = delete $arg->{mask} if exists $arg->{mask};
         $arg->{mode} = oct '777' unless exists $arg->{mode};
@@ -268,7 +268,7 @@ sub rmtree {
         for my $k (sort keys %{$arg}) {
             push @bad_args, $k unless $args_permitted{$k};
         }
-        _croak("Unrecognized option(s) passed to remove_tree(): @bad_args")
+        _carp("Unrecognized option(s) passed to remove_tree(): @bad_args")
             if @bad_args;
         ${ $arg->{error} }  = [] if exists $arg->{error};
         ${ $arg->{result} } = [] if exists $arg->{result};
