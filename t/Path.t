@@ -3,7 +3,7 @@
 
 use strict;
 
-use Test::More tests => 159;
+use Test::More tests => 161;
 use Config;
 use Fcntl ':mode';
 
@@ -737,36 +737,6 @@ cannot remove directory for [^:]+: .* at \1 line \2},
         'make_path verbose with final hashref'
     );
 
-    # {
-    #     local $@;
-    #     eval {
-    #         @created = make_path(
-    #             $dir,
-    #             $dir2,
-    #             { verbose => 1, mode => 0711, foo => 1, bar => 1 }
-    #         );
-    #     };
-    #     like($@,
-    #         qr/Unrecognized option\(s\) passed to make_path\(\):.*?bar.*?foo/,
-    #         'make_path with final hashref failed due to unrecognized options'
-    #     );
-    # }
-    #
-    # {
-    #     local $@;
-    #     eval {
-    #         @created = remove_tree(
-    #             $dir,
-    #             $dir2,
-    #             { verbose => 1, foo => 1, bar => 1 }
-    #         );
-    #     };
-    #     like($@,
-    #         qr/Unrecognized option\(s\) passed to remove_tree\(\):.*?bar.*?foo/,
-    #         'remove_tree with final hashref failed due to unrecognized options'
-    #     );
-    # }
-
     stdout_is(
         sub {
             @created = remove_tree(
@@ -814,6 +784,42 @@ SKIP: {
             like($message, qr(\Acannot (?:restore permissions to \d+|chdir to child|unlink file): ), "failed to remove $file with unlink")
                 or diag($message)
         }
+    }
+}
+
+{
+    my $base = catdir($tmp_base,'output2');
+    my $dir  = catdir($base,'A');
+    my $dir2 = catdir($base,'B');
+
+    {
+        my $warn;
+        $SIG{__WARN__} = sub { $warn = shift };
+
+        my @created = make_path(
+            $dir,
+            $dir2,
+            { mode => 0711, foo => 1, bar => 1 }
+        );
+        like($warn,
+            qr/Unrecognized option\(s\) passed to make_path\(\):.*?bar.*?foo/,
+            'make_path with final hashref warned due to unrecognized options'
+        );
+    }
+
+    {
+        my $warn;
+        $SIG{__WARN__} = sub { $warn = shift };
+
+        my @created = remove_tree(
+            $dir,
+            $dir2,
+            { foo => 1, bar => 1 }
+        );
+        like($warn,
+            qr/Unrecognized option\(s\) passed to remove_tree\(\):.*?bar.*?foo/,
+            'remove_tree with final hashref failed due to unrecognized options'
+        );
     }
 }
 
