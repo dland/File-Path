@@ -721,36 +721,6 @@ cannot remove directory for [^:]+: .* at \1 line \2},
         'make_path verbose with final hashref'
     );
 
-    # {
-    #     local $@;
-    #     eval {
-    #         @created = make_path(
-    #             $dir,
-    #             $dir2,
-    #             { verbose => 1, mode => 0711, foo => 1, bar => 1 }
-    #         );
-    #     };
-    #     like($@,
-    #         qr/Unrecognized option\(s\) passed to make_path\(\):.*?bar.*?foo/,
-    #         'make_path with final hashref failed due to unrecognized options'
-    #     );
-    # }
-    #
-    # {
-    #     local $@;
-    #     eval {
-    #         @created = remove_tree(
-    #             $dir,
-    #             $dir2,
-    #             { verbose => 1, foo => 1, bar => 1 }
-    #         );
-    #     };
-    #     like($@,
-    #         qr/Unrecognized option\(s\) passed to remove_tree\(\):.*?bar.*?foo/,
-    #         'remove_tree with final hashref failed due to unrecognized options'
-    #     );
-    # }
-
     stdout_is(
         sub {
             @created = remove_tree(
@@ -802,56 +772,24 @@ SKIP: {
 }
 
 {
-    my $base = catdir($tmp_base,'output');
-    $dir  = catdir($base,'A');
-    $dir2 = catdir($base,'B');
+    like(_run_for_warning(sub{rmtree( undef, 1 )}),
+        qr/No root path\(s\) specified/,
+        "rmtree of nothing carps sensibly"
+    );
 
-    {
-        my $warn;
-        $SIG{__WARN__} = sub { $warn = shift };
+    like(_run_for_warning(sub{rmtree( '', 1 )}),
+        qr/\ANo root path\(s\) specified\b/,
+        "rmtree of empty dir carps sensibly"
+    );
 
-        rmtree( undef, 1 );
-        like($warn,
-            qr/No root path\(s\) specified/,
-            "rmtree of nothing carps sensibly"
-        );
-    }
+    ok(! _run_for_warning(sub{make_path()}),
+        "make_path no args does not carp");
 
-    {
-        my $warn;
-        $SIG{__WARN__} = sub { $warn = shift };
+    ok(! _run_for_warning(sub{remove_tree()}),
+        "remove_tree no args does not carp");
 
-        rmtree( '', 1 );
-        like($warn,
-            qr/\ANo root path\(s\) specified\b/,
-            "rmtree of empty dir carps sensibly"
-        );
-    }
-
-    {
-        my $warn;
-        $SIG{__WARN__} = sub { $warn = shift };
-
-        make_path();
-        ok(! $warn, "make_path no args does not carp");
-    }
-
-    {
-        my $warn;
-        $SIG{__WARN__} = sub { $warn = shift };
-
-        remove_tree();
-        ok(! $warn, "remove_tree no args does not carp");
-    }
-
-    {
-        my $warn;
-        $SIG{__WARN__} = sub { $warn = shift };
-
-        mkpath();
-        ok(! $warn, "mkpath no args does not carp");
-    }
-
+    ok(! _run_for_warning(sub{mkpath()}),
+        "mkpath no args does not carp");
 }
 
 SKIP: {
@@ -886,3 +824,12 @@ is(
     $expect,
     "Windows path unixified as expected"
 );
+
+sub _run_for_warning {
+    my $coderef = shift;
+    my $warn;
+    local $SIG{__WARN__} = sub { $warn = shift };
+    &$coderef;
+    return $warn;
+}
+
