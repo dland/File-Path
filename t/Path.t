@@ -16,9 +16,6 @@ BEGIN {
     use_ok('File::Spec::Functions');
 }
 
-eval "use Test::Output";
-my $has_Test_Output = $@ ? 0 : 1;
-
 my $Is_VMS = $^O eq 'VMS';
 
 # first check for stupid permissions second for full, so we clean up
@@ -609,54 +606,44 @@ SKIP: {
     is($dir_uid, $max_uid, "... owned by $max_uid");
     is($dir_gid, $max_gid, "... owned by group $max_gid");
 
-    SKIP: {
-        skip 'Test::Output not available', 1
-               unless $has_Test_Output;
+    do { ++$max_user  } while (getpwnam($max_user));
+    do { ++$max_group } while (getgrnam($max_group));
 
-        # invent a user and group that don't exist
-        do { ++$max_user  } while (getpwnam($max_user));
-        do { ++$max_group } while (getgrnam($max_group));
-
-        $dir = catdir($dir_stem, 'aad');
-        my $rv = _run_for_warning(sub {make_path($dir, {user => $max_user, group => $max_group})} );
-        like($rv,
-            qr{\Aunable to map $max_user to a uid, ownership not changed: .* at \S+ line \d+
+    $dir = catdir($dir_stem, 'aad');
+    my $rv = _run_for_warning(sub {make_path($dir, {user => $max_user, group => $max_group})} );
+    like($rv,
+        qr{\Aunable to map $max_user to a uid, ownership not changed: .* at \S+ line \d+
 unable to map $max_group to a gid, group ownership not changed: .* at \S+ line \d+\b},
-            "created a directory not owned by $max_user:$max_group..."
-        );
-    }
+        "created a directory not owned by $max_user:$max_group..."
+    );
 }
 
 SKIP: {
-    skip 'Test::Output not available', 13
-        unless $has_Test_Output;
+    $dir = catdir('EXTRA', '3');
+    skip "extra scenarios not set up, see eg/setup-extra-tests", 3
+        unless -e $dir;
 
-    SKIP: {
-        $dir = catdir('EXTRA', '3');
-        skip "extra scenarios not set up, see eg/setup-extra-tests", 3
-            unless -e $dir;
+    my $rv;
+    $dir = catdir('EXTRA', '3', 'U');
+     $rv = _run_for_warning(sub {rmtree($dir, {verbose => 0})});
+     like($rv,
+        qr{\Acannot make child directory read-write-exec for [^:]+: .* at \S+ line \d+},
+        q(rmtree can't chdir into root dir)
+    );
 
-        my $rv;
-        $dir = catdir('EXTRA', '3', 'U');
-         $rv = _run_for_warning(sub {rmtree($dir, {verbose => 0})});
-         like($rv,
-            qr{\Acannot make child directory read-write-exec for [^:]+: .* at \S+ line \d+},
-            q(rmtree can't chdir into root dir)
-        );
-
-        $dir = catdir('EXTRA', '3');
-        $rv = _run_for_warning(sub {rmtree($dir, {})});
-        like($rv,
-            qr{\Acannot make child directory read-write-exec for [^:]+: .* at (\S+) line (\d+)
+    $dir = catdir('EXTRA', '3');
+    $rv = _run_for_warning(sub {rmtree($dir, {})});
+    like($rv,
+        qr{\Acannot make child directory read-write-exec for [^:]+: .* at (\S+) line (\d+)
 cannot make child directory read-write-exec for [^:]+: .* at \1 line \2
 cannot make child directory read-write-exec for [^:]+: .* at \1 line \2
 cannot remove directory for [^:]+: .* at \1 line \2},
-            'rmtree with file owned by root'
-        );
+        'rmtree with file owned by root'
+    );
 
-        $rv = _run_for_warning(sub {rmtree('EXTRA', {})});
-        like($rv,
-            qr{\Acannot remove directory for [^:]+: .* at (\S+) line (\d+)
+    $rv = _run_for_warning(sub {rmtree('EXTRA', {})});
+    like($rv,
+        qr{\Acannot remove directory for [^:]+: .* at (\S+) line (\d+)
 cannot remove directory for [^:]+: .* at \1 line \2
 cannot make child directory read-write-exec for [^:]+: .* at \1 line \2
 cannot make child directory read-write-exec for [^:]+: .* at \1 line \2
@@ -666,75 +653,74 @@ cannot unlink file for [^:]+: .* at \1 line \2
 cannot restore permissions to \d+ for [^:]+: .* at \1 line \2
 cannot make child directory read-write-exec for [^:]+: .* at \1 line \2
 cannot remove directory for [^:]+: .* at \1 line \2},
-            'rmtree with insufficient privileges'
-        );
-    }
-
-    my $base = catdir($tmp_base,'output');
-    $dir  = catdir($base,'A');
-    $dir2 = catdir($base,'B');
-
-    is(_run_for_verbose(sub {@created = mkpath($dir, 1)}),
-        "mkdir $base\nmkdir $dir\n",
-        'mkpath verbose (old style 1)'
+        'rmtree with insufficient privileges'
     );
+}
 
-    is(_run_for_verbose(sub {@created = mkpath([$dir2], 1)}),
-        "mkdir $dir2\n",
-        'mkpath verbose (old style 2)'
+my $base = catdir($tmp_base,'output');
+$dir  = catdir($base,'A');
+$dir2 = catdir($base,'B');
+
+is(_run_for_verbose(sub {@created = mkpath($dir, 1)}),
+    "mkdir $base\nmkdir $dir\n",
+    'mkpath verbose (old style 1)'
+);
+
+is(_run_for_verbose(sub {@created = mkpath([$dir2], 1)}),
+    "mkdir $dir2\n",
+    'mkpath verbose (old style 2)'
+);
+
+is(_run_for_verbose(sub {$count = rmtree([$dir, $dir2], 1, 1)}),
+    "rmdir $dir\nrmdir $dir2\n",
+    'rmtree verbose (old style)'
+);
+
+is(_run_for_verbose(sub {@created = mkpath($dir, {verbose => 1, mask => 0750})}),
+    "mkdir $dir\n",
+    'mkpath verbose (new style 1)'
+);
+
+is(_run_for_verbose(sub {@created = mkpath($dir2, 1, 0771)}),
+    "mkdir $dir2\n",
+    'mkpath verbose (new style 2)'
+);
+
+is(_run_for_verbose(sub {$count = rmtree([$dir, $dir2], 1, 1)}),
+    "rmdir $dir\nrmdir $dir2\n",
+    'again: rmtree verbose (old style)'
+);
+
+is(_run_for_verbose(sub {@created = make_path( $dir, $dir2, {verbose => 1, mode => 0711});}),
+    "mkdir $dir\nmkdir $dir2\n",
+    'make_path verbose with final hashref'
+);
+
+is(_run_for_verbose(sub {@created = remove_tree( $dir, $dir2, {verbose => 1});}),
+    "rmdir $dir\nrmdir $dir2\n",
+    'remove_tree verbose with final hashref'
+);
+
+# Have to re-create these 2 directories so that next block is not skipped.
+@created = make_path(
+    $dir,
+    $dir2,
+    { mode => 0711 }
+);
+is(@created, 2, "2 directories created");
+
+SKIP: {
+    $file = catdir($dir2, "file");
+    skip "Cannot create $file", 2 unless open OUT, "> $file";
+    print OUT "test file, safe to delete\n", scalar(localtime), "\n";
+    close OUT;
+
+    ok(-e $file, "file created in directory");
+
+    is(_run_for_verbose(sub {$count = rmtree($dir, $dir2, {verbose => 1, safe => 1})}),
+        "rmdir $dir\nunlink $file\nrmdir $dir2\n",
+        'rmtree safe verbose (new style)'
     );
-
-    is(_run_for_verbose(sub {$count = rmtree([$dir, $dir2], 1, 1)}),
-        "rmdir $dir\nrmdir $dir2\n",
-        'rmtree verbose (old style)'
-    );
-
-    is(_run_for_verbose(sub {@created = mkpath($dir, {verbose => 1, mask => 0750})}),
-        "mkdir $dir\n",
-        'mkpath verbose (new style 1)'
-    );
-
-    is(_run_for_verbose(sub {@created = mkpath($dir2, 1, 0771)}),
-        "mkdir $dir2\n",
-        'mkpath verbose (new style 2)'
-    );
-
-    is(_run_for_verbose(sub {$count = rmtree([$dir, $dir2], 1, 1)}),
-        "rmdir $dir\nrmdir $dir2\n",
-        'again: rmtree verbose (old style)'
-    );
-
-    is(_run_for_verbose(sub {@created = make_path( $dir, $dir2, {verbose => 1, mode => 0711});}),
-        "mkdir $dir\nmkdir $dir2\n",
-        'make_path verbose with final hashref'
-    );
-
-    is(_run_for_verbose(sub {@created = remove_tree( $dir, $dir2, {verbose => 1});}),
-        "rmdir $dir\nrmdir $dir2\n",
-        'remove_tree verbose with final hashref'
-    );
-
-    # Have to re-create these 2 directories so that next block is not skipped.
-    @created = make_path(
-        $dir,
-        $dir2,
-        { mode => 0711 }
-    );
-    is(@created, 2, "2 directories created");
-
-    SKIP: {
-        $file = catdir($dir2, "file");
-        skip "Cannot create $file", 2 unless open OUT, "> $file";
-        print OUT "test file, safe to delete\n", scalar(localtime), "\n";
-        close OUT;
-
-        ok(-e $file, "file created in directory");
-
-        is(_run_for_verbose(sub {$count = rmtree($dir, $dir2, {verbose => 1, safe => 1})}),
-            "rmdir $dir\nunlink $file\nrmdir $dir2\n",
-            'rmtree safe verbose (new style)'
-        );
-    }
 }
 
 SKIP: {
