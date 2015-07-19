@@ -3,7 +3,7 @@
 
 use strict;
 
-use Test::More tests => 170;
+use Test::More tests => 171;
 use Config;
 use Fcntl ':mode';
 
@@ -545,7 +545,7 @@ SKIP : {
 }
 
 SKIP: {
-    my $skip_count = 7; # DRY
+    my $skip_count = 8; # DRY
     skip "getpwent() not implemented on $^O", $skip_count
         unless $Config{d_getpwent};
     skip "getgrent() not implemented on $^O", $skip_count
@@ -619,7 +619,7 @@ unable to map $max_group to a gid, group ownership not changed: .* at \S+ line \
 }
 
 SKIP: {
-    skip 'Test::Output not available', 9
+    skip 'Test::Output not available', 12
         unless $has_Test_Output;
 
     SKIP: {
