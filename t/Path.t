@@ -618,8 +618,8 @@ SKIP: {
         do { ++$max_group } while (getgrnam($max_group));
 
         $dir = catdir($dir_stem, 'aad');
-        stderr_like(
-            sub {make_path($dir, {user => $max_user, group => $max_group})},
+        my $rv = _run_for_warning(sub {make_path($dir, {user => $max_user, group => $max_group})} );
+        like($rv,
             qr{\Aunable to map $max_user to a uid, ownership not changed: .* at \S+ line \d+
 unable to map $max_group to a gid, group ownership not changed: .* at \S+ line \d+\b},
             "created a directory not owned by $max_user:$max_group..."
@@ -636,16 +636,17 @@ SKIP: {
         skip "extra scenarios not set up, see eg/setup-extra-tests", 3
             unless -e $dir;
 
+        my $rv;
         $dir = catdir('EXTRA', '3', 'U');
-        stderr_like(
-            sub {rmtree($dir, {verbose => 0})},
+         $rv = _run_for_warning(sub {rmtree($dir, {verbose => 0})});
+         like($rv,
             qr{\Acannot make child directory read-write-exec for [^:]+: .* at \S+ line \d+},
             q(rmtree can't chdir into root dir)
         );
 
         $dir = catdir('EXTRA', '3');
-        stderr_like(
-            sub {rmtree($dir, {})},
+        $rv = _run_for_warning(sub {rmtree($dir, {})});
+        like($rv,
             qr{\Acannot make child directory read-write-exec for [^:]+: .* at (\S+) line (\d+)
 cannot make child directory read-write-exec for [^:]+: .* at \1 line \2
 cannot make child directory read-write-exec for [^:]+: .* at \1 line \2
@@ -653,8 +654,8 @@ cannot remove directory for [^:]+: .* at \1 line \2},
             'rmtree with file owned by root'
         );
 
-        stderr_like(
-            sub {rmtree('EXTRA', {})},
+        $rv = _run_for_warning(sub {rmtree('EXTRA', {})});
+        like($rv,
             qr{\Acannot remove directory for [^:]+: .* at (\S+) line (\d+)
 cannot remove directory for [^:]+: .* at \1 line \2
 cannot make child directory read-write-exec for [^:]+: .* at \1 line \2
