@@ -914,9 +914,7 @@ sub _run_for_warning {
 
 sub _run_for_verbose {
     my $coderef = shift;
-    my $stdout;
-    my $oldfh = select(STDOUT);
-    local $| = 1;
+    my $stdout = '';
     close STDOUT;
     open STDOUT, '>', \$stdout;
     &$coderef;
