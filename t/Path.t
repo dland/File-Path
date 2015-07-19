@@ -3,16 +3,13 @@
 
 use strict;
 
-use Test::More tests => 168;
+use Test::More tests => 170;
 use Config;
 use Fcntl ':mode';
 
 BEGIN {
-    # 1
     use_ok('Cwd');
-    # 2
     use_ok('File::Path', qw(rmtree mkpath make_path remove_tree));
-    # 3
     use_ok('File::Spec::Functions');
 }
 
@@ -29,13 +26,12 @@ for my $perm (0111,0777) {
     chmod $perm, "mhx", $path;
 
     my $oct = sprintf('0%o', $perm);
-    # 4
+
     ok(-d "mhx", "mkdir parent dir $oct");
-    # 5
     ok(-d $path, "mkdir child dir $oct");
 
     rmtree("mhx");
-    # 6
+
     ok(! -e "mhx", "mhx does not exist $oct");
 }
 
@@ -57,7 +53,6 @@ my @dir = (
 # create them
 my @created = mkpath([@dir]);
 
-# 7
 is(scalar(@created), 7, "created list of directories");
 
 # pray for no race conditions blowing them out from under us
@@ -81,12 +76,10 @@ SKIP: {
     skip "cannot remove a file we failed to create", 1
         unless $file_count == 1;
     my $count = rmtree($file_name);
-# 8
     is($count, 1, "rmtree'ed a file");
 }
 
 @created = mkpath('');
-# 9
 is(scalar(@created), 0, "Can't create a directory named ''");
 
 my $dir;
@@ -112,16 +105,14 @@ sub count {
     open my $f, '>', 'foo.dat';
     close $f;
     my $before = count(curdir());
-# 10
     cmp_ok($before, '>', 0, "baseline $before");
 
     gisle('1st', 1);
-# 11
     is(count(curdir()), $before + 1, "first after $before");
 
     $before = count(curdir());
     gisle('2nd', 1);
-# 12
+
     is(count(curdir()), $before + 1, "second after $before");
 
     chdir updir();
@@ -134,13 +125,13 @@ sub count {
     open my $f, '>', 'foo.dat';
     close $f;
     my $before = count(curdir());
-# 13
+
     cmp_ok($before, '>', 0, "ARGV $before");
     {
         local @ARGV = (1);
         mkpath('3rd', !shift, 0755);
     }
-# 14
+
     is(count(curdir()), $before + 1, "third after $before");
 
     $before = count(curdir());
@@ -148,7 +139,7 @@ sub count {
         local @ARGV = (1);
         mkpath('4th', !shift, 0755);
     }
-# 15
+
     is(count(curdir()), $before + 1, "fourth after $before");
 
     chdir updir();
@@ -169,21 +160,21 @@ SKIP: {
 
     rmtree($dir, {error => \$error});
     my $nr_err = @$error;
-# 16
+
     is($nr_err, 1, "ancestor error");
 
     if ($nr_err) {
         my ($file, $message) = each %{$error->[0]};
-# 17
+
         is($file, $dir, "ancestor named");
         my $ortho_dir = $^O eq 'MSWin32' ? File::Path::_slash_lc($dir2) : $dir2;
         $^O eq 'MSWin32' and $message
             =~ s/\A(cannot remove path when cwd is )(.*)\Z/$1 . File::Path::_slash_lc($2)/e;
-# 18
+
         is($message, "cannot remove path when cwd is $ortho_dir", "ancestor reason");
-# 19
+
         ok(-d $dir2, "child not removed");
-# 20
+
         ok(-d $dir, "ancestor not removed");
     }
     else {
@@ -194,18 +185,18 @@ SKIP: {
     }
     chdir $cwd;
     rmtree($dir);
-# 21
+
     ok(!(-d $dir), "ancestor now removed");
 };
 
 my $count = rmtree({error => \$error});
-# 22
+
 is( $count, 0, 'rmtree of nothing, count of zero' );
-# 23
+
 is( scalar(@$error), 0, 'no diagnostic captured' );
 
 @created = mkpath($tmp_base, 0);
-# 24
+
 is(scalar(@created), 0, "skipped making existing directories (old style 1)")
     or diag("unexpectedly recreated @created");
 
@@ -213,13 +204,13 @@ $dir = catdir($tmp_base,'C');
 # mkpath returns unix syntax filespecs on VMS
 $dir = VMS::Filespec::unixify($dir) if $Is_VMS;
 @created = make_path($tmp_base, $dir);
-# 25
+
 is(scalar(@created), 1, "created directory (new style 1)");
-# 26
+
 is($created[0], $dir, "created directory (new style 1) cross-check");
 
 @created = mkpath($tmp_base, 0, 0700);
-# 27
+
 is(scalar(@created), 0, "skipped making existing directories (old style 2)")
     or diag("unexpectedly recreated @created");
 
@@ -227,18 +218,18 @@ $dir2 = catdir($tmp_base,'D');
 # mkpath returns unix syntax filespecs on VMS
 $dir2 = VMS::Filespec::unixify($dir2) if $Is_VMS;
 @created = make_path($tmp_base, $dir, $dir2);
-# 28
+
 is(scalar(@created), 1, "created directory (new style 2)");
-# 29
+
 is($created[0], $dir2, "created directory (new style 2) cross-check");
 
 $count = rmtree($dir, 0);
-# 30
+
 is($count, 1, "removed directory unsafe mode");
 
 $count = rmtree($dir2, 0, 1);
 my $removed = $Is_VMS ? 0 : 1;
-# 31
+
 is($count, $removed, "removed directory safe mode");
 
 # mkdir foo ./E/../Y
@@ -246,15 +237,15 @@ is($count, $removed, "removed directory safe mode");
 # existence of E is neither here nor there
 $dir = catdir($tmp_base, 'E', updir(), 'Y');
 @created =mkpath($dir);
-# 32
+
 cmp_ok(scalar(@created), '>=', 1, "made one or more dirs because of ..");
-# 33
+
 cmp_ok(scalar(@created), '<=', 2, "made less than two dirs because of ..");
-# 34
+
 ok( -d catdir($tmp_base, 'Y'), "directory after parent" );
 
 @created = make_path(catdir(curdir(), $tmp_base));
-# 35
+
 is(scalar(@created), 0, "nothing created")
     or diag(@created);
 
@@ -269,14 +260,14 @@ rmtree( $dir, $dir2,
     }
 );
 
-# 36
+
 is(scalar(@$error), 0, "no errors unlinking a and z");
-# 37
+
 is(scalar(@$list),  4, "list contains 4 elements")
     or diag("@$list");
-# 38
+
 ok(-d $dir,  "dir a still exists");
-# 39
+
 ok(-d $dir2, "dir z still exists");
 
 $dir = catdir($tmp_base,'F');
@@ -284,38 +275,38 @@ $dir = catdir($tmp_base,'F');
 $dir = VMS::Filespec::unixify($dir) if $Is_VMS;
 
 @created = mkpath($dir, undef, 0770);
-# 40
+
 is(scalar(@created), 1, "created directory (old style 2 verbose undef)");
-# 41
+
 is($created[0], $dir, "created directory (old style 2 verbose undef) cross-check");
-# 42
+
 is(rmtree($dir, undef, 0), 1, "removed directory 2 verbose undef");
 
 @created = mkpath($dir, undef);
-# 43
+
 is(scalar(@created), 1, "created directory (old style 2a verbose undef)");
-# 44
+
 is($created[0], $dir, "created directory (old style 2a verbose undef) cross-check");
-# 45
+
 is(rmtree($dir, undef), 1, "removed directory 2a verbose undef");
 
 @created = mkpath($dir, 0, undef);
-# 46
+
 is(scalar(@created), 1, "created directory (old style 3 mode undef)");
-# 47
+
 is($created[0], $dir, "created directory (old style 3 mode undef) cross-check");
-# 48
+
 is(rmtree($dir, 0, undef), 1, "removed directory 3 verbose undef");
 
 $dir = catdir($tmp_base,'G');
 $dir = VMS::Filespec::unixify($dir) if $Is_VMS;
 
 @created = mkpath($dir, undef, 0200);
-# 49
+
 is(scalar(@created), 1, "created write-only dir");
-# 50
+
 is($created[0], $dir, "created write-only directory cross-check");
-# 51
+
 is(rmtree($dir), 1, "removed write-only dir");
 
 # borderline new-style heuristics
@@ -330,33 +321,31 @@ $dir   = catdir('a', 'd1');
 $dir2  = catdir('a', 'd2');
 
 @created = make_path( $dir, 0, $dir2 );
-# 52
+
 is(scalar @created, 3, 'new-style 3 dirs created');
 
 $count = remove_tree( $dir, 0, $dir2, );
-# 53
+
 is($count, 3, 'new-style 3 dirs removed');
 
 @created = make_path( $dir, $dir2, 1 );
-# 54
+
 is(scalar @created, 3, 'new-style 3 dirs created (redux)');
 
 $count = remove_tree( $dir, $dir2, 1 );
-# 55
+
 is($count, 3, 'new-style 3 dirs removed (redux)');
 
 @created = make_path( $dir, $dir2 );
-# 56
+
 is(scalar @created, 2, 'new-style 2 dirs created');
 
 $count = remove_tree( $dir, $dir2 );
-# 57
+
 is($count, 2, 'new-style 2 dirs removed');
 
 $dir = catdir("a\nb", 'd1');
 $dir2 = catdir("a\nb", 'd2');
-
-
 
 SKIP: {
   # Better to search for *nix derivatives?
@@ -365,11 +354,11 @@ SKIP: {
     if $^O eq 'MSWin32';
 
   @created = make_path( $dir, $dir2 );
-# 58
+
   is(scalar @created, 3, 'new-style 3 dirs created in parent with newline');
 
   $count = remove_tree( $dir, $dir2 );
-# 59
+
   is($count, 2, 'new-style 2 dirs removed in parent with newline');
 }
 
@@ -389,13 +378,13 @@ SKIP: {
     #firewalled, disabled, blocked, or no NICs are on and there the PC has no
     #working TCPIP stack, \\?\ will always work
     $UNC_path = '\\\\?\\'.$UNC_path;
-# 60
+
     is(mkpath($UNC_path), 1, 'mkpath on Win32 UNC path returns made 1 dir');
-# 61
+
     ok(-d $UNC_path, 'mkpath on Win32 UNC path made dir');
 
     my $removed = rmtree($UNC_path);
-# 62
+
     cmp_ok($removed, '>', 0, "removed $removed entries from $UNC_path");
 }
 
@@ -407,10 +396,10 @@ SKIP: {
     $dir  = 'bug487319';
     $dir2 = 'bug487319-symlink';
     @created = make_path($dir, {mask => 0700});
-# 63
+
     is( scalar @created, 1, 'bug 487319 setup' );
     symlink($dir, $dir2);
-# 64
+
     ok(-e $dir2, "debian bug 487319 setup symlink") or diag($dir2);
 
     chmod 0500, $dir;
@@ -418,7 +407,7 @@ SKIP: {
     remove_tree($dir2);
 
     my $mask = (stat $dir)[2];
-# 65
+
     is( $mask, $mask_initial, 'mask of symlink target dir unchanged (debian bug 487319)');
 
     # now try a file
@@ -427,19 +416,19 @@ SKIP: {
     my $file2 = 'bug487319-file-symlink';
     open my $out, '>', $file;
     close $out;
-# 66
+
     ok(-e $file, 'file exists');
 
     chmod 0500, $file;
     $mask_initial = (stat $file)[2];
 
     symlink($file, $file2);
-# 67
+
     ok(-e $file2, 'file2 exists');
     remove_tree($file2);
 
     $mask = (stat $file)[2];
-# 68
+
     is( $mask, $mask_initial, 'mask of symlink target file unchanged (debian bug 487319)');
 
     remove_tree($dir);
@@ -527,7 +516,9 @@ SKIP: {
 
 SKIP : {
     my $skip_count = 19;
-    #this test will fail on Windows, as per: http://perldoc.perl.org/perlport.html#chmod
+    # this test will fail on Windows, as per:
+    #   http://perldoc.perl.org/perlport.html#chmod
+
     skip "Windows chmod test skipped", $skip_count
         if $^O eq 'MSWin32';
     my $mode;
@@ -554,7 +545,7 @@ SKIP : {
 }
 
 SKIP: {
-    my $skip_count = 8; # DRY
+    my $skip_count = 7; # DRY
     skip "getpwent() not implemented on $^O", $skip_count
         unless $Config{d_getpwent};
     skip "getgrent() not implemented on $^O", $skip_count
@@ -628,7 +619,7 @@ unable to map $max_group to a gid, group ownership not changed: .* at \S+ line \
 }
 
 SKIP: {
-    skip 'Test::Output not available', 13
+    skip 'Test::Output not available', 9
         unless $has_Test_Output;
 
     SKIP: {
@@ -737,7 +728,7 @@ cannot remove directory for [^:]+: .* at \1 line \2},
 }
 
 SKIP: {
-    skip "extra scenarios not set up, see eg/setup-extra-tests", 11
+    skip "extra scenarios not set up, see eg/setup-extra-tests", 14
         unless -d catdir(qw(EXTRA 1));
 
     rmtree 'EXTRA', {safe => 0, error => \$error};
