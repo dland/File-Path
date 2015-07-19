@@ -915,7 +915,7 @@ sub _run_for_warning {
 sub _run_for_verbose {
     my $coderef = shift;
     my $stdout = '';
-    close STDOUT;
+    local *STDOUT;
     open STDOUT, '>', \$stdout;
     &$coderef;
     close STDOUT;
