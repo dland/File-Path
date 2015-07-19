@@ -3,7 +3,7 @@
 
 use strict;
 
-use Test::More tests => 159;
+use Test::More tests => 160;
 use Config;
 use Fcntl ':mode';
 
@@ -673,65 +673,53 @@ cannot remove directory for [^:]+: .* at \1 line \2},
     $dir  = catdir($base,'A');
     $dir2 = catdir($base,'B');
 
-    stdout_is(
-        sub {@created = mkpath($dir, 1)},
+    is(_run_for_verbose(sub {@created = mkpath($dir, 1)}),
         "mkdir $base\nmkdir $dir\n",
         'mkpath verbose (old style 1)'
     );
 
-    stdout_is(
-        sub {@created = mkpath([$dir2], 1)},
+    is(_run_for_verbose(sub {@created = mkpath([$dir2], 1)}),
         "mkdir $dir2\n",
         'mkpath verbose (old style 2)'
     );
 
-    stdout_is(
-        sub {$count = rmtree([$dir, $dir2], 1, 1)},
+    is(_run_for_verbose(sub {$count = rmtree([$dir, $dir2], 1, 1)}),
         "rmdir $dir\nrmdir $dir2\n",
         'rmtree verbose (old style)'
     );
 
-    stdout_is(
-        sub {@created = mkpath($dir, {verbose => 1, mask => 0750})},
+    is(_run_for_verbose(sub {@created = mkpath($dir, {verbose => 1, mask => 0750})}),
         "mkdir $dir\n",
         'mkpath verbose (new style 1)'
     );
 
-    stdout_is(
-        sub {@created = mkpath($dir2, 1, 0771)},
+    is(_run_for_verbose(sub {@created = mkpath($dir2, 1, 0771)}),
         "mkdir $dir2\n",
         'mkpath verbose (new style 2)'
     );
 
-    stdout_is(
-        sub {$count = rmtree([$dir, $dir2], 1, 1)},
+    is(_run_for_verbose(sub {$count = rmtree([$dir, $dir2], 1, 1)}),
         "rmdir $dir\nrmdir $dir2\n",
         'again: rmtree verbose (old style)'
     );
 
-    stdout_is(
-        sub {
-            @created = make_path(
-                $dir,
-                $dir2,
-                { verbose => 1, mode => 0711 }
-            );
-        },
+    is(_run_for_verbose(sub {@created = make_path( $dir, $dir2, {verbose => 1, mode => 0711});}),
         "mkdir $dir\nmkdir $dir2\n",
         'make_path verbose with final hashref'
     );
 
-    stdout_is(
-        sub {
-            @created = remove_tree(
-                $dir,
-                $dir2,
-                { verbose => 1 }
-            );
-        },
+    is(_run_for_verbose(sub {@created = remove_tree( $dir, $dir2, {verbose => 1});}),
         "rmdir $dir\nrmdir $dir2\n",
         'remove_tree verbose with final hashref'
     );
+
+    # Have to re-create these 2 directories so that next block is not skipped.
+    @created = make_path(
+        $dir,
+        $dir2,
+        { mode => 0711 }
+    );
+    is(@created, 2, "2 directories created");
 
     SKIP: {
         $file = catdir($dir2, "file");
@@ -741,8 +729,7 @@ cannot remove directory for [^:]+: .* at \1 line \2},
 
         ok(-e $file, "file created in directory");
 
-        stdout_is(
-            sub {$count = rmtree($dir, $dir2, {verbose => 1, safe => 1})},
+        is(_run_for_verbose(sub {$count = rmtree($dir, $dir2, {verbose => 1, safe => 1})}),
             "rmdir $dir\nunlink $file\nrmdir $dir2\n",
             'rmtree safe verbose (new style)'
         );
@@ -831,5 +818,17 @@ sub _run_for_warning {
     local $SIG{__WARN__} = sub { $warn = shift };
     &$coderef;
     return $warn;
+}
+
+sub _run_for_verbose {
+    my $coderef = shift;
+    my $stdout;
+    my $oldfh = select(STDOUT);
+    local $| = 1;
+    close STDOUT;
+    open STDOUT, '>', \$stdout;
+    &$coderef;
+    close STDOUT;
+    return $stdout;
 }
 
