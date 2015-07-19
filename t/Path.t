@@ -628,7 +628,7 @@ unable to map $max_group to a gid, group ownership not changed: .* at \S+ line \
 }
 
 SKIP: {
-    skip 'Test::Output not available', 18
+    skip 'Test::Output not available', 13
         unless $has_Test_Output;
 
     SKIP: {
@@ -672,22 +672,6 @@ cannot remove directory for [^:]+: .* at \1 line \2},
     my $base = catdir($tmp_base,'output');
     $dir  = catdir($base,'A');
     $dir2 = catdir($base,'B');
-
-    stderr_like(
-        sub { rmtree( undef, 1 ) },
-        qr/\ANo root path\(s\) specified\b/,
-        "rmtree of nothing carps sensibly"
-    );
-
-    stderr_like(
-        sub { rmtree( '', 1 ) },
-        qr/\ANo root path\(s\) specified\b/,
-        "rmtree of empty dir carps sensibly"
-    );
-
-    stderr_is( sub { make_path() }, '', "make_path no args does not carp" );
-    stderr_is( sub { remove_tree() }, '', "remove_tree no args does not carp" );
-    stderr_is( sub { mkpath() }, '', "mkpath no args does not carp" );
 
     stdout_is(
         sub {@created = mkpath($dir, 1)},
@@ -736,36 +720,6 @@ cannot remove directory for [^:]+: .* at \1 line \2},
         "mkdir $dir\nmkdir $dir2\n",
         'make_path verbose with final hashref'
     );
-
-    # {
-    #     local $@;
-    #     eval {
-    #         @created = make_path(
-    #             $dir,
-    #             $dir2,
-    #             { verbose => 1, mode => 0711, foo => 1, bar => 1 }
-    #         );
-    #     };
-    #     like($@,
-    #         qr/Unrecognized option\(s\) passed to make_path\(\):.*?bar.*?foo/,
-    #         'make_path with final hashref failed due to unrecognized options'
-    #     );
-    # }
-    #
-    # {
-    #     local $@;
-    #     eval {
-    #         @created = remove_tree(
-    #             $dir,
-    #             $dir2,
-    #             { verbose => 1, foo => 1, bar => 1 }
-    #         );
-    #     };
-    #     like($@,
-    #         qr/Unrecognized option\(s\) passed to remove_tree\(\):.*?bar.*?foo/,
-    #         'remove_tree with final hashref failed due to unrecognized options'
-    #     );
-    # }
 
     stdout_is(
         sub {
@@ -817,6 +771,27 @@ SKIP: {
     }
 }
 
+{
+    like(_run_for_warning(sub{rmtree( undef, 1 )}),
+        qr/No root path\(s\) specified/,
+        "rmtree of nothing carps sensibly"
+    );
+
+    like(_run_for_warning(sub{rmtree( '', 1 )}),
+        qr/\ANo root path\(s\) specified\b/,
+        "rmtree of empty dir carps sensibly"
+    );
+
+    ok(! _run_for_warning(sub{make_path()}),
+        "make_path no args does not carp");
+
+    ok(! _run_for_warning(sub{remove_tree()}),
+        "remove_tree no args does not carp");
+
+    ok(! _run_for_warning(sub{mkpath()}),
+        "mkpath no args does not carp");
+}
+
 SKIP: {
     my $nr_tests = 6;
     my $cwd = getcwd() or skip "failed to getcwd: $!", $nr_tests;
@@ -849,3 +824,12 @@ is(
     $expect,
     "Windows path unixified as expected"
 );
+
+sub _run_for_warning {
+    my $coderef = shift;
+    my $warn;
+    local $SIG{__WARN__} = sub { $warn = shift };
+    &$coderef;
+    return $warn;
+}
+
