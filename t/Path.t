@@ -3,7 +3,7 @@
 
 use strict;
 
-use Test::More tests => 159;
+use Test::More tests => 161;
 use Config;
 use Fcntl ':mode';
 
@@ -772,24 +772,40 @@ SKIP: {
 }
 
 {
-    like(_run_for_warning(sub{rmtree( undef, 1 )}),
-        qr/No root path\(s\) specified/,
-        "rmtree of nothing carps sensibly"
-    );
 
-    like(_run_for_warning(sub{rmtree( '', 1 )}),
-        qr/\ANo root path\(s\) specified\b/,
-        "rmtree of empty dir carps sensibly"
-    );
+    my $base = catdir($tmp_base,'output2');
+    my $dir  = catdir($base,'A');
+    my $dir2 = catdir($base,'B');
 
-    ok(! _run_for_warning(sub{make_path()}),
-        "make_path no args does not carp");
+    {
+        my $warn;
+        $SIG{__WARN__} = sub { $warn = shift };
 
-    ok(! _run_for_warning(sub{remove_tree()}),
-        "remove_tree no args does not carp");
+        my @created = make_path(
+            $dir,
+            $dir2,
+            { mode => 0711, foo => 1, bar => 1 }
+        );
+        like($warn,
+            qr/Unrecognized option\(s\) passed to make_path\(\):.*?bar.*?foo/,
+            'make_path with final hashref warned due to unrecognized options'
+        );
+    }
 
-    ok(! _run_for_warning(sub{mkpath()}),
-        "mkpath no args does not carp");
+    {
+        my $warn;
+        $SIG{__WARN__} = sub { $warn = shift };
+
+        my @created = remove_tree(
+            $dir,
+            $dir2,
+            { foo => 1, bar => 1 }
+        );
+        like($warn,
+            qr/Unrecognized option\(s\) passed to remove_tree\(\):.*?bar.*?foo/,
+            'remove_tree with final hashref failed due to unrecognized options'
+        );
+    }
 }
 
 SKIP: {
@@ -832,4 +848,3 @@ sub _run_for_warning {
     &$coderef;
     return $warn;
 }
-
