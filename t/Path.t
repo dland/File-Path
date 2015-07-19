@@ -3,7 +3,8 @@
 
 use strict;
 
-use Test::More tests => 161;
+
+use Test::More tests => 170;
 use Config;
 use Fcntl ':mode';
 
@@ -772,7 +773,6 @@ SKIP: {
 }
 
 {
-
     my $base = catdir($tmp_base,'output2');
     my $dir  = catdir($base,'A');
     my $dir2 = catdir($base,'B');
@@ -840,6 +840,83 @@ is(
     $expect,
     "Windows path unixified as expected"
 );
+
+{
+    my ($x, $message, $object, $expect, $rv, $arg, $error);
+    my ($k, $v, $second_error, $third_error);
+    local $! = 2;
+    $x = $!;
+
+    $message = 'message in a bottle';
+    $object = '/path/to/glory';
+    $expect = "$message for $object: $x";
+    $rv = _run_for_warning( sub {
+        File::Path::_error(
+            {},
+            $message,
+            $object
+        );
+    } );
+    like($rv, qr/^$expect/,
+        "no \$arg->{error}: defined 2nd and 3rd args: got expected error message");
+
+    $object = undef;
+    $expect = "$message: $x";
+    $rv = _run_for_warning( sub {
+        File::Path::_error(
+            {},
+            $message,
+            $object
+        );
+    } );
+    like($rv, qr/^$expect/,
+        "no \$arg->{error}: defined 2nd arg; undefined 3rd arg: got expected error message");
+
+    $message = 'message in a bottle';
+    $object = undef;
+    $expect = "$message: $x";
+    $arg = { error => \$error };
+    File::Path::_error(
+        $arg,
+        $message,
+        $object
+    );
+    is(ref($error->[0]), 'HASH',
+        "first element of array inside \$error is hashref");
+    ($k, $v) = %{$error->[0]};
+    is($k, '', 'key of hash is empty string, since 3rd arg was undef');
+    is($v, $expect, "value of hash is 2nd arg: $message");
+
+    $message = '';
+    $object = '/path/to/glory';
+    $expect = "$message: $x";
+    $arg = { error => \$second_error };
+    File::Path::_error(
+        $arg,
+        $message,
+        $object
+    );
+    is(ref($second_error->[0]), 'HASH',
+        "first element of array inside \$second_error is hashref");
+    ($k, $v) = %{$second_error->[0]};
+    is($k, $object, "key of hash is '$object', since 3rd arg was defined");
+    is($v, $expect, "value of hash is 2nd arg: $message");
+
+    $message = '';
+    $object = undef;
+    $expect = "$message: $x";
+    $arg = { error => \$third_error };
+    File::Path::_error(
+        $arg,
+        $message,
+        $object
+    );
+    is(ref($third_error->[0]), 'HASH',
+        "first element of array inside \$third_error is hashref");
+    ($k, $v) = %{$third_error->[0]};
+    is($k, '', "key of hash is empty string, since 3rd arg was undef");
+    is($v, $expect, "value of hash is 2nd arg: $message");
+}
 
 sub _run_for_warning {
     my $coderef = shift;
