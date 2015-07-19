@@ -3,7 +3,7 @@
 
 use strict;
 
-use Test::More tests => 171;
+use Test::More tests => 169;
 use Config;
 use Fcntl ':mode';
 
@@ -728,7 +728,7 @@ cannot remove directory for [^:]+: .* at \1 line \2},
 }
 
 SKIP: {
-    skip "extra scenarios not set up, see eg/setup-extra-tests", 14
+    skip "extra scenarios not set up, see eg/setup-extra-tests", 12
         unless -d catdir(qw(EXTRA 1));
 
     rmtree 'EXTRA', {safe => 0, error => \$error};
