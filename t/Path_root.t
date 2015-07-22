@@ -1,19 +1,13 @@
-
-
 use strict;
-
 use Test::More;
 use Config;
-use Fcntl ':mode';
+use lib 't/';
+use FilePathTest;
+use File::Path qw(rmtree mkpath make_path remove_tree);
+use File::Spec::Functions;
 
-
-BEGIN {
-    use Cwd;
-    use File::Path qw(rmtree mkpath make_path remove_tree);
-    use File::Spec::Functions;
-}
-
-plan skip_all  => 'prerequisites not met' unless prereq() == 1;
+my $prereq = prereq();
+plan skip_all  => $prereq if defined $prereq;
 plan tests     => 6;
 
 my $tmp_base = catdir(
@@ -102,31 +96,11 @@ sub max_g {
 }
 
 sub prereq {
-  # "getpwent() not implemented on $^O"
-  return 0 unless $Config{d_getpwent};
-
-  # getgrent() not implemented on $^O
-  return 0 unless $Config{d_getgrent};
-
-  # not running as root
-  return 0 unless $< == 0;
-
-  # "darwin's nobody and nogroup are -1 or -2"
-  return 0 if $^O eq 'darwin';
-
-  # getpwent() appears to be insane
-  return 0 unless @{ max_u() }[1] > 0;
-
-  # getgrent() appears to be insane
-  return 0 unless @{ max_g() }[1] > 0;
-
-  return 1;
-}
-
-sub _run_for_warning {
-    my $coderef = shift;
-    my $warn;
-    local $SIG{__WARN__} = sub { $warn = shift };
-    &$coderef;
-    return $warn;
+  return "getpwent() not implemented on $^O" unless $Config{d_getpwent};
+  return "getgrent() not implemented on $^O" unless $Config{d_getgrent};
+  return "not running as root" unless $< == 0;
+  return "darwin's nobody and nogroup are -1 or -2" if $^O eq 'darwin';
+  return "getpwent() appears to be insane" unless @{ max_u() }[1] > 0;
+  return "getgrent() appears to be insane" unless @{ max_g() }[1] > 0;
+  return undef;
 }
