@@ -1,10 +1,11 @@
 
 
 use strict;
-
 use Test::More tests => 6;
 use Config;
 use Fcntl ':mode';
+use lib 't/';
+use FilePathTest;
 
 BEGIN {
     use_ok('Cwd');
