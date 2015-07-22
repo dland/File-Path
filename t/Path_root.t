@@ -16,10 +16,6 @@ BEGIN {
 plan skip_all  => 'prerequisites not met' unless prereq() == 1;
 plan tests     => 6;
 
-eval "use Test::Output";
-my $has_Test_Output = $@ ? 0 : 1;
-
-
 my $tmp_base = catdir(
     curdir(),
     sprintf( 'test-%x-%x-%x', time, $$, rand(99999) ),
@@ -67,16 +63,13 @@ is($dir_uid, $max_uid, "... owned by $max_uid");
 is($dir_gid, $max_gid, "... owned by group $max_gid");
 
 SKIP: {
-    skip 'Test::Output not available', 1
-           unless $has_Test_Output;
-
     # invent a user and group that don't exist
     do { ++$max_user  } while (getpwnam($max_user));
     do { ++$max_group } while (getgrnam($max_group));
 
     $dir = catdir($dir_stem, 'aad');
-    stderr_like(
-        sub {make_path($dir, {user => $max_user, group => $max_group})},
+    my $rv = _run_for_warning(sub {make_path($dir, {user => $max_user, group => $max_group})} );
+    like($rv,
         qr{\Aunable to map $max_user to a uid, ownership not changed: .* at \S+ line \d+
 unable to map $max_group to a gid, group ownership not changed: .* at \S+ line \d+\b},
         "created a directory not owned by $max_user:$max_group..."
@@ -128,4 +121,12 @@ sub prereq {
   return 0 unless @{ max_g() }[1] > 0;
 
   return 1;
+}
+
+sub _run_for_warning {
+    my $coderef = shift;
+    my $warn;
+    local $SIG{__WARN__} = sub { $warn = shift };
+    &$coderef;
+    return $warn;
 }

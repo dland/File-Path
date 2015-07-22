@@ -13,9 +13,6 @@ BEGIN {
     use_ok('File::Spec::Functions');
 }
 
-eval "use Test::Output";
-my $has_Test_Output = $@ ? 0 : 1;
-
 my $Is_VMS = $^O eq 'VMS';
 
 # first check for stupid permissions second for full, so we clean up
@@ -478,76 +475,70 @@ SKIP : {
     }
 }
 
+my $base = catdir($tmp_base,'output');
+$dir  = catdir($base,'A');
+$dir2 = catdir($base,'B');
+
+is(_run_for_verbose(sub {@created = mkpath($dir, 1)}),
+    "mkdir $base\nmkdir $dir\n",
+    'mkpath verbose (old style 1)'
+);
+
+is(_run_for_verbose(sub {@created = mkpath([$dir2], 1)}),
+    "mkdir $dir2\n",
+    'mkpath verbose (old style 2)'
+);
+
+is(_run_for_verbose(sub {$count = rmtree([$dir, $dir2], 1, 1)}),
+    "rmdir $dir\nrmdir $dir2\n",
+    'rmtree verbose (old style)'
+);
+
+is(_run_for_verbose(sub {@created = mkpath($dir, {verbose => 1, mask => 0750})}),
+    "mkdir $dir\n",
+    'mkpath verbose (new style 1)'
+);
+
+is(_run_for_verbose(sub {@created = mkpath($dir2, 1, 0771)}),
+    "mkdir $dir2\n",
+    'mkpath verbose (new style 2)'
+);
+
+is(_run_for_verbose(sub {$count = rmtree([$dir, $dir2], 1, 1)}),
+    "rmdir $dir\nrmdir $dir2\n",
+    'again: rmtree verbose (old style)'
+);
+
+is(_run_for_verbose(sub {@created = make_path( $dir, $dir2, {verbose => 1, mode => 0711});}),
+    "mkdir $dir\nmkdir $dir2\n",
+    'make_path verbose with final hashref'
+);
+
+is(_run_for_verbose(sub {@created = remove_tree( $dir, $dir2, {verbose => 1});}),
+    "rmdir $dir\nrmdir $dir2\n",
+    'remove_tree verbose with final hashref'
+);
+
+# Have to re-create these 2 directories so that next block is not skipped.
+@created = make_path(
+    $dir,
+    $dir2,
+    { mode => 0711 }
+);
+is(@created, 2, "2 directories created");
+
 SKIP: {
-    skip 'Test::Output not available', 11
-        unless $has_Test_Output;
+    $file = catdir($dir2, "file");
+    skip "Cannot create $file", 2 unless open OUT, "> $file";
+    print OUT "test file, safe to delete\n", scalar(localtime), "\n";
+    close OUT;
 
-    my $base = catdir($tmp_base,'output');
-    $dir  = catdir($base,'A');
-    $dir2 = catdir($base,'B');
+    ok(-e $file, "file created in directory");
 
-    is(_run_for_verbose(sub {@created = mkpath($dir, 1)}),
-        "mkdir $base\nmkdir $dir\n",
-        'mkpath verbose (old style 1)'
+    is(_run_for_verbose(sub {$count = rmtree($dir, $dir2, {verbose => 1, safe => 1})}),
+        "rmdir $dir\nunlink $file\nrmdir $dir2\n",
+        'rmtree safe verbose (new style)'
     );
-
-    is(_run_for_verbose(sub {@created = mkpath([$dir2], 1)}),
-        "mkdir $dir2\n",
-        'mkpath verbose (old style 2)'
-    );
-
-    is(_run_for_verbose(sub {$count = rmtree([$dir, $dir2], 1, 1)}),
-        "rmdir $dir\nrmdir $dir2\n",
-        'rmtree verbose (old style)'
-    );
-
-    is(_run_for_verbose(sub {@created = mkpath($dir, {verbose => 1, mask => 0750})}),
-        "mkdir $dir\n",
-        'mkpath verbose (new style 1)'
-    );
-
-    is(_run_for_verbose(sub {@created = mkpath($dir2, 1, 0771)}),
-        "mkdir $dir2\n",
-        'mkpath verbose (new style 2)'
-    );
-
-    is(_run_for_verbose(sub {$count = rmtree([$dir, $dir2], 1, 1)}),
-        "rmdir $dir\nrmdir $dir2\n",
-        'again: rmtree verbose (old style)'
-    );
-
-    is(_run_for_verbose(sub {@created = make_path( $dir, $dir2, {verbose => 1, mode => 0711});}),
-        "mkdir $dir\nmkdir $dir2\n",
-        'make_path verbose with final hashref'
-    );
-
-    is(_run_for_verbose(sub {@created = remove_tree( $dir, $dir2, {verbose => 1});}),
-        "rmdir $dir\nrmdir $dir2\n",
-        'remove_tree verbose with final hashref'
-    );
-
-    # Have to re-create these 2 directories so that next block is not skipped.
-    @created = make_path(
-        $dir,
-        $dir2,
-        { mode => 0711 }
-    );
-    is(@created, 2, "2 directories created");
-
-    SKIP: {
-        $file = catdir($dir2, "file");
-# BUGBUG If you remove this skip the test fails horribly, seems like an out of date check
-        skip "Cannot create $file", 2 unless open OUT, "> $file" and $has_Test_Output;
-        print OUT "test file, safe to delete\n", scalar(localtime), "\n";
-        close OUT;
-
-        ok(-e $file, "file created in directory");
-
-        is(_run_for_verbose(sub {$count = rmtree($dir, $dir2, {verbose => 1, safe => 1})}),
-            "rmdir $dir\nunlink $file\nrmdir $dir2\n",
-            'rmtree safe verbose (new style)'
-        );
-    }
 }
 
 {
@@ -708,10 +699,8 @@ sub _run_for_warning {
 
 sub _run_for_verbose {
     my $coderef = shift;
-    my $stdout;
-    my $oldfh = select(STDOUT);
-    local $| = 1;
-    close STDOUT;
+    my $stdout = '';
+    local *STDOUT;
     open STDOUT, '>', \$stdout;
     &$coderef;
     close STDOUT;
