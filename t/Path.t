@@ -6,6 +6,8 @@ use strict;
 use Test::More tests => 127;
 use Config;
 use Fcntl ':mode';
+use lib 't/';
+use FilePathTest;
 
 BEGIN {
     use_ok('Cwd');
@@ -687,22 +689,4 @@ is(
     ($k, $v) = %{$third_error->[0]};
     is($k, '', "key of hash is empty string, since 3rd arg was undef");
     is($v, $expect, "value of hash is 2nd arg: $message");
-}
-
-sub _run_for_warning {
-    my $coderef = shift;
-    my $warn;
-    local $SIG{__WARN__} = sub { $warn = shift };
-    &$coderef;
-    return $warn;
-}
-
-sub _run_for_verbose {
-    my $coderef = shift;
-    my $stdout = '';
-    local *STDOUT;
-    open STDOUT, '>', \$stdout;
-    &$coderef;
-    close STDOUT;
-    return $stdout;
 }
