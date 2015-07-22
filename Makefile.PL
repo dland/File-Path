@@ -14,7 +14,7 @@ WriteMakefile(
     VERSION_FROM  => 'lib/File/Path.pm',
     ABSTRACT_FROM => 'lib/File/Path.pm',
     AUTHOR        => 'Richard Elberger',
-    INSTALLDIRS   => ($] >= 5.008001 ? 'perl' : 'site'),
+    INSTALLDIRS   => ($] < 5.011 ? 'perl' : 'site'),
     PREREQ_PM => {
         'Carp'           => 0,
         'Cwd'            => 0,
