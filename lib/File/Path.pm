@@ -344,7 +344,8 @@ sub _rmtree {
           : $root;
 
         my ( $ldev, $lino, $perm ) = ( lstat $root )[ 0, 1, 2 ]
-          or ( _error( $arg, "$root", $root ) and next ROOT_DIR );
+          or ( _error( $arg, "Cannot stat directory", $root ) and
+               next ROOT_DIR );
 
         if ( -d _ ) {
             $root = VMS::Filespec::vmspath( VMS::Filespec::pathify($root) )
