@@ -577,8 +577,7 @@ File::Path - Create or remove directory trees
 
 =head1 VERSION
 
-This document describes version 2.09 of File::Path, released
-2013-01-17.
+This document describes version 2.11 of File::Path.
 
 =head1 SYNOPSIS
 
