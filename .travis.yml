@@ -8,5 +8,11 @@ perl:
   - "5.12"
   - "5.10"
   - "5.8"
+  - "5.6.2"
+  - "dev"
+  - "blead"
 notifications:
   email: false
+matrix:
+  allow_failures:
+    - perl: blead
