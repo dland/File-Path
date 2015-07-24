@@ -1,12 +1,17 @@
 Revision history for Perl extension File::Path.
 
-2.11_001
-    - RT 105527 Move eg/ and author tests from t/Path.t to xt/
-    - RT 105986 Refactor unit tests to better care for test counts
-    - RT 105977 Fix INSTALLDIRS for Perl 5.6
-    - RT 105935 Clarify error behavior for rmtree errors on root directory
+2.11_001 2015-07-24
+    - RT 105527 FIX: Move eg/ and author tests from t/Path.t to xt/
+    - RT 105935 FIX: Clarify error behavior for rmtree errors on root directory
       (not fixed but documented).  Clarify in documentation the how alike
       rmtree is to 'rm -r'.
+    - RT 105977 FIX: Fix INSTALLDIRS for Perl 5.6
+    - RT 105986 FIX: Refactor unit tests to better care for test counts
+    - RT 106039 FIX: Wrong version in Pod
+    - RT 106043 FIX: Suboptimal error message
+    - RT 106045 FIX: _run_for_warning does not consume multiple messages
+    - RT 106047 FIX: _run_for_verbose cause fail test on 5.6.2
+    - Removed optional File::Output usage and run those tests for everyone.
 
 2.11     2015-07-17
     - Change argument check error from croak to carp since there are some
