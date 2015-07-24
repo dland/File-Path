@@ -1,5 +1,6 @@
 package FilePathTest;
 use base 'Exporter';
+use SelectSaver;
 use Cwd;
 use File::Spec::Functions;
 
@@ -15,18 +16,19 @@ sub _basedir {
 sub _run_for_warning {
   my $coderef = shift;
   my $warn;
-  local $SIG{__WARN__} = sub { $warn = shift };
+  local $SIG{__WARN__} = sub { $warn .= shift };
   &$coderef;
   return $warn;
 }
 
 sub _run_for_verbose {
   my $coderef = shift;
-  my $stdout = '';
-  local *STDOUT;
-  open STDOUT, '>', \$stdout;
-  &$coderef;
-  close STDOUT;
+  my $stdout;
+  {
+    open $stdout_fh, '>', \$stdout;
+    my $guard = SelectSaver->new($stdout_fh);
+    &$coderef;
+  }
   return $stdout;
 }
 
