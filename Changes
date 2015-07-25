@@ -1,5 +1,11 @@
 Revision history for Perl extension File::Path.
 
+2.11_002 2015-07-25
+    - Fix windows refactored tests - missing import and since it's out of
+      Path.t the path creation creates 2 directories (t/Path_win32.t)
+    - Fix root only tests.  getpwent/getgrent was called twice, causing
+      skip_all to trigger and giving impression all tests pass.
+
 2.11_001 2015-07-24
     - RT 105527 FIX: Move eg/ and author tests from t/Path.t to xt/
     - RT 105935 FIX: Clarify error behavior for rmtree errors on root directory
