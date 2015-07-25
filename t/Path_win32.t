@@ -3,10 +3,11 @@ use Test::More;
 use lib 't/';
 use FilePathTest;
 use File::Path;
+use Cwd;
 use File::Spec::Functions;
 
 plan skip_all  => 'not win32' unless $^O eq 'MSWin32';
-plan tests     => 6;
+plan tests     => 3;
 
 my $tmp_base = catdir(
     curdir(),
@@ -19,7 +20,7 @@ my $UNC_path = catdir(getcwd(), $tmp_base, 'uncdir');
 #working TCPIP stack, \\?\ will always work
 $UNC_path = '\\\\?\\'.$UNC_path;
 
-is(mkpath($UNC_path), 1, 'mkpath on Win32 UNC path returns made 1 dir');
+is(mkpath($UNC_path), 2, 'mkpath on Win32 UNC path returns made 2 dir - base and uncdir');
 
 ok(-d $UNC_path, 'mkpath on Win32 UNC path made dir');
 
