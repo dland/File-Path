@@ -86,6 +86,7 @@ sub max_u {
       $max_user = $u[0];
     }
   }
+  setpwent(); # in case we want to run again later
   return [ $max_uid, $max_user ];
 }
 
@@ -100,6 +101,7 @@ sub max_g {
       $max_group = $g[0];
     }
   }
+  setgrent(); # in case we want to run again later
   return [ $max_gid, $max_group ];
 }
 
