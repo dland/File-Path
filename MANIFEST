@@ -4,8 +4,6 @@ MANIFEST			This list of files
 MANIFEST.SKIP
 META.yml
 README
-TODO
-README.md
 lib/File/Path.pm
 t/FilePathTest.pm
 t/Path-Class.t
