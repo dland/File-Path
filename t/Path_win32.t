@@ -3,6 +3,7 @@ use Test::More;
 use lib 't/';
 use FilePathTest;
 use File::Path;
+use File::Spec::Functions;
 
 plan skip_all  => 'not win32' unless $^O eq 'MSWin32';
 plan tests     => 6;
